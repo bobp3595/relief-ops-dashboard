@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relief Ops — Disaster Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ede8;--bg2:#fff;--bg3:#f7f5f2;--bg4:#ede9e3;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1917;--text2:#6b6760;--text3:#a09d98;
+  --red:#c0392b;--red-bg:#fdf2f1;--red-t:#8b2420;
+  --amber:#b7620a;--amber-bg:#fef8f0;--amber-t:#7a4208;
+  --green:#2d6a1f;--green-bg:#f1f8ee;--green-t:#1e4815;
+  --blue:#1a5c96;--blue-bg:#f0f6fd;--blue-t:#113d66;
+  --purple:#5b4ba8;--purple-bg:#f4f2fc;--purple-t:#3d3272;
+  --shadow:0 2px 8px rgba(0,0,0,.1),0 0 0 1px rgba(0,0,0,.05);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.06);
+  --r:12px;--rm:8px;
+  --font:'DM Sans',system-ui,sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;padding:32px 20px;}
+.page{max-width:900px;margin:0 auto;}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:40px;height:40px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.logo-icon svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.logo-text{font-size:20px;font-weight:600;letter-spacing:-.02em;}
+.logo-sub{font-size:12px;color:var(--text2);margin-top:1px;}
+
+/* New disaster button */
+.btn{font-family:var(--font);font-size:13px;padding:8px 16px;border-radius:var(--rm);border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--text);font-weight:500;transition:all .12s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--bg3);}
+.btn-primary{background:var(--red);border-color:var(--red);color:#fff;}
+.btn-primary:hover{background:#a93226;border-color:#a93226;}
+.btn-sm{font-size:12px;padding:5px 11px;}
+.btn-ghost{border-color:transparent;color:var(--text2);}
+.btn-ghost:hover{color:var(--text);background:var(--bg3);}
+
+/* Section labels */
+.section-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;}
+
+/* Disaster cards grid */
+.disasters-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-bottom:32px;}
+
+.disaster-card{background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow .15s,border-color .15s;cursor:pointer;}
+.disaster-card:hover{box-shadow:var(--shadow);border-color:var(--border2);}
+.disaster-card.archived{opacity:.6;}
+
+.dc-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);}
+.dc-type-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;margin-bottom:8px;}
+.dc-name{font-size:15px;font-weight:600;margin-bottom:3px;color:var(--text);}
+.dc-location{font-size:12px;color:var(--text2);}
+.dc-body{padding:10px 16px;}
+.dc-stats{display:flex;gap:16px;margin-bottom:8px;}
+.dc-stat{display:flex;flex-direction:column;gap:1px;}
+.dc-stat-val{font-size:16px;font-weight:600;}
+.dc-stat-lbl{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.04em;}
+.dc-stat-val.red{color:var(--red);}
+.dc-stat-val.amber{color:var(--amber);}
+.dc-stat-val.green{color:var(--green);}
+.dc-footer{padding:8px 16px;border-top:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:space-between;}
+.dc-date{font-size:11px;color:var(--text3);}
+.dc-actions{display:flex;gap:5px;}
+
+/* Progress bar */
+.dc-progress{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:6px;}
+.dc-progress-fill{height:100%;border-radius:2px;background:var(--green);transition:width .5s;}
+
+/* Empty state */
+.empty-state{text-align:center;padding:48px 20px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-title{font-size:16px;font-weight:600;margin-bottom:6px;}
+.empty-sub{font-size:13px;color:var(--text2);margin-bottom:20px;}
+
+/* New disaster modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal{background:var(--bg2);border-radius:var(--r);width:100%;max-width:460px;border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:15px;font-weight:600;}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;font-family:var(--font);}
+.modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;}
+.flabel{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.frow{display:flex;flex-direction:column;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+input,select,textarea{font-family:var(--font);font-size:13px;color:var(--text);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rm);padding:8px 11px;width:100%;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 2px rgba(192,57,43,.1);}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--bg3);border-radius:0 0 var(--r) var(--r);}
+
+/* Disaster type chips */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.type-opt{padding:8px 10px;border-radius:var(--rm);border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:500;transition:all .12s;text-align:left;display:flex;align-items:center;gap:7px;}
+.type-opt:hover{background:var(--bg3);}
+.type-opt.on{border-width:2px;font-weight:600;}
+.type-opt.flood.on{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-t);}
+.type-opt.tornado.on{background:var(--purple-bg);border-color:var(--purple);color:var(--purple-t);}
+.type-opt.hurricane.on{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-t);}
+.type-opt.wildfire.on{background:#fdf3f1;border-color:#c0392b;color:#8b2420;}
+.type-opt.earthquake.on{background:var(--amber-bg);border-color:var(--amber);color:var(--amber-t);}
+.type-opt.winter.on{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-t);}
+.type-opt.chemical.on{background:var(--amber-bg);border-color:var(--amber);color:var(--amber-t);}
+.type-opt.other.on{background:var(--bg4);border-color:var(--border3,rgba(0,0,0,.22));color:var(--text);}
+
+/* Archive section */
+.archive-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text2);font-size:12px;font-weight:500;margin-bottom:12px;background:none;border:none;font-family:var(--font);}
+.archive-toggle:hover{color:var(--text);}
+
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <div class="logo-text">Relief Ops</div>
+        <div class="logo-sub">Beacon Rescue + Fill the Need</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="openNewModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New disaster
+    </button>
+  </div>
+
+  <!-- Active disasters -->
+  <div class="section-label">Active responses</div>
+  <div class="disasters-grid" id="active-grid"></div>
+
+  <!-- Archived -->
+  <button class="archive-toggle" onclick="toggleArchive()" id="archive-toggle">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="archive-arrow"><polyline points="6 9 12 15 18 9"/></svg>
+    Show archived responses
+  </button>
+  <div id="archived-section" class="hidden">
+    <div class="section-label">Archived</div>
+    <div class="disasters-grid" id="archive-grid"></div>
+  </div>
+
+</div><!-- end page -->
+
+<!-- NEW DISASTER MODAL -->
+<div class="modal-overlay hidden" id="new-modal" onclick="if(event.target===this)closeNewModal()">
+<div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-head">
+    <div class="modal-title">New disaster response</div>
+    <button class="modal-close" onclick="closeNewModal()">×</button>
+  </div>
+  <div class="modal-body">
+    <div class="frow">
+      <div class="flabel">Disaster type</div>
+      <div class="type-grid" id="type-grid"></div>
+    </div>
+    <div class="fgrid">
+      <div class="frow">
+        <div class="flabel">Name / event</div>
+        <input id="d-name" placeholder="e.g. Nashville Flooding" />
+      </div>
+      <div class="frow">
+        <div class="flabel">Location</div>
+        <input id="d-location" placeholder="City, County, or Region" />
+      </div>
+    </div>
+    <div class="frow">
+      <div class="flabel">Notes (optional)</div>
+      <textarea id="d-notes" placeholder="Any initial notes about this event…" style="min-height:60px;resize:vertical;"></textarea>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" onclick="closeNewModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="createDisaster()">Create dashboard</button>
+  </div>
+</div>
+</div>
+
+<script>
+const DISASTER_TYPES = [
+  {key:'flood',    emoji:'🌊', label:'Flood',        color:'blue'},
+  {key:'tornado',  emoji:'🌪️', label:'Tornado',      color:'tornado'},
+  {key:'hurricane',emoji:'🌀', label:'Hurricane',    color:'blue'},
+  {key:'wildfire', emoji:'🔥', label:'Wildfire',     color:'wildfire'},
+  {key:'earthquake',emoji:'⚡',label:'Earthquake',   color:'earthquake'},
+  {key:'winter',   emoji:'❄️', label:'Winter storm', color:'winter'},
+  {key:'chemical', emoji:'☣️', label:'Chemical/haz', color:'chemical'},
+  {key:'other',    emoji:'🚨', label:'Other',        color:'other'},
+];
+
+let selectedType = 'flood';
+let showArchived = false;
+
+// ── Storage helpers ───────────────────────────────────────────────────────────
+function getDisasters() {
+  return JSON.parse(localStorage.getItem('relief_disasters') || '[]');
+}
+function saveDisasters(list) {
+  localStorage.setItem('relief_disasters', JSON.stringify(list));
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const all = getDisasters();
+  const active = all.filter(d => !d.archived);
+  const archived = all.filter(d => d.archived);
+
+  const activeGrid = document.getElementById('active-grid');
+  const archiveGrid = document.getElementById('archive-grid');
+
+  if (active.length === 0) {
+    activeGrid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-icon">🗺️</div>
+        <div class="empty-title">No active responses</div>
+        <div class="empty-sub">Click "New disaster" to create your first response dashboard.</div>
+        <button class="btn btn-primary" onclick="openNewModal()">+ New disaster</button>
+      </div>`;
+  } else {
+    activeGrid.innerHTML = active.map(d => disasterCard(d)).join('');
+  }
+
+  archiveGrid.innerHTML = archived.length
+    ? archived.map(d => disasterCard(d)).join('')
+    : '<div style="color:var(--text3);font-size:13px;padding:8px 0;">No archived responses.</div>';
+}
+
+function disasterCard(d) {
+  const dt = DISASTER_TYPES.find(t => t.key === d.type) || DISASTER_TYPES[7];
+  const typeColors = {
+    flood:'background:var(--blue-bg);color:var(--blue-t);',
+    tornado:'background:var(--purple-bg);color:var(--purple-t);',
+    hurricane:'background:var(--blue-bg);color:var(--blue-t);',
+    wildfire:'background:#fdf3f1;color:#8b2420;',
+    earthquake:'background:var(--amber-bg);color:var(--amber-t);',
+    winter:'background:var(--blue-bg);color:var(--blue-t);',
+    chemical:'background:var(--amber-bg);color:var(--amber-t);',
+    other:'background:var(--bg4);color:var(--text2);',
+  };
+
+  // Load stats from localStorage for this disaster
+  const prefix = `relief_${d.id}_`;
+  const needs = JSON.parse(localStorage.getItem(prefix + 'needs') || '[]');
+  const matches = JSON.parse(localStorage.getItem(prefix + 'matches') || '[]');
+  const metrics = JSON.parse(localStorage.getItem(prefix + 'metrics') || 'null');
+
+  const open = needs.filter(n => n.status === 'open').length;
+  const inprog = needs.filter(n => n.status === 'progress').length;
+  const fulfilled = needs.filter(n => n.status === 'fulfilled').length;
+  const total = Math.max(open + inprog + fulfilled, 1);
+  const pct = Math.round(fulfilled / total * 100);
+  const lbs = metrics ? metrics.lbs?.val || 0 : 0;
+
+  const created = new Date(d.created).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+
+  return `
+    <div class="disaster-card${d.archived ? ' archived' : ''}" onclick="openDashboard('${d.id}')">
+      <div class="dc-header">
+        <div class="dc-type-badge" style="${typeColors[d.type] || typeColors.other}">${dt.emoji} ${dt.label}</div>
+        <div class="dc-name">${d.name}</div>
+        <div class="dc-location">${d.location || 'Location not set'}</div>
+      </div>
+      <div class="dc-body">
+        <div class="dc-stats">
+          <div class="dc-stat"><div class="dc-stat-val red">${open}</div><div class="dc-stat-lbl">Open</div></div>
+          <div class="dc-stat"><div class="dc-stat-val amber">${inprog}</div><div class="dc-stat-lbl">Active</div></div>
+          <div class="dc-stat"><div class="dc-stat-val green">${fulfilled}</div><div class="dc-stat-lbl">Fulfilled</div></div>
+          <div class="dc-stat"><div class="dc-stat-val" style="color:var(--teal,#0f6e56);">${lbs.toLocaleString()}</div><div class="dc-stat-lbl">Lbs aid</div></div>
+        </div>
+        <div class="dc-progress"><div class="dc-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="dc-footer">
+        <div class="dc-date">Created ${created}</div>
+        <div class="dc-actions" onclick="event.stopPropagation()">
+          ${!d.archived
+            ? `<button class="btn btn-sm btn-ghost" onclick="archiveDisaster('${d.id}')">Archive</button>`
+            : `<button class="btn btn-sm btn-ghost" onclick="restoreDisaster('${d.id}')">Restore</button>`
+          }
+          <button class="btn btn-sm btn-ghost" style="color:var(--red);" onclick="deleteDisaster('${d.id}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function openDashboard(id) {
+  // Open dashboard with disaster ID in URL hash
+  window.location.href = `relief-ops-dashboard.html#disaster=${id}`;
+}
+
+function createDisaster() {
+  const name = document.getElementById('d-name').value.trim();
+  const location = document.getElementById('d-location').value.trim();
+  const notes = document.getElementById('d-notes').value.trim();
+
+  if (!name) { document.getElementById('d-name').focus(); return; }
+
+  const id = 'disaster_' + Date.now();
+  const disaster = {
+    id,
+    type: selectedType,
+    name,
+    location,
+    notes,
+    created: new Date().toISOString(),
+    archived: false,
+  };
+
+  const list = getDisasters();
+  list.unshift(disaster);
+  saveDisasters(list);
+
+  closeNewModal();
+  openDashboard(id);
+}
+
+function archiveDisaster(id) {
+  if (!confirm('Archive this response? You can restore it later.')) return;
+  const list = getDisasters().map(d => d.id === id ? {...d, archived: true} : d);
+  saveDisasters(list);
+  render();
+}
+
+function restoreDisaster(id) {
+  const list = getDisasters().map(d => d.id === id ? {...d, archived: false} : d);
+  saveDisasters(list);
+  render();
+}
+
+function deleteDisaster(id) {
+  const d = getDisasters().find(x => x.id === id);
+  if (!confirm(`Permanently delete "${d?.name}"? All data for this response will be lost.`)) return;
+  // Remove all localStorage keys for this disaster
+  const prefix = `relief_${id}_`;
+  Object.keys(localStorage).filter(k => k.startsWith(prefix)).forEach(k => localStorage.removeItem(k));
+  saveDisasters(getDisasters().filter(d => d.id !== id));
+  render();
+}
+
+function toggleArchive() {
+  showArchived = !showArchived;
+  document.getElementById('archived-section').classList.toggle('hidden', !showArchived);
+  document.getElementById('archive-toggle').innerHTML = `
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${showArchived?'180':'0'}deg);transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+    ${showArchived ? 'Hide' : 'Show'} archived responses`;
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function buildTypeGrid() {
+  const grid = document.getElementById('type-grid');
+  grid.innerHTML = DISASTER_TYPES.map(t => `
+    <button class="type-opt ${t.key}${t.key === selectedType ? ' on' : ''}" onclick="selectType('${t.key}')">
+      <span style="font-size:16px;">${t.emoji}</span> ${t.label}
+    </button>`).join('');
+}
+
+function selectType(key) {
+  selectedType = key;
+  buildTypeGrid();
+}
+
+function openNewModal() {
+  selectedType = 'flood';
+  buildTypeGrid();
+  document.getElementById('d-name').value = '';
+  document.getElementById('d-location').value = '';
+  document.getElementById('d-notes').value = '';
+  document.getElementById('new-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('d-name').focus(), 100);
+}
+
+function closeNewModal() {
+  document.getElementById('new-modal').classList.add('hidden');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNewModal(); });
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
