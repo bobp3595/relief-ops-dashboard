@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Relief Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ede8;--card:#fff;--bg2:#f7f5f2;--bg3:#ede9e3;--bg4:#e4dfd8;
+  --border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);
+  --text:#1a1917;--muted:#6b6760;--faint:#a09d98;
+  --red:#c0392b;--red-bg:#fdf2f1;--red-lt:#8b2420;
+  --amber:#b7620a;--amber-bg:#fef8f0;--amber-lt:#7a4208;
+  --green:#2d6a1f;--green-bg:#f1f8ee;--green-lt:#1e4815;
+  --blue:#1a5c96;--blue-bg:#f0f6fd;--blue-lt:#113d66;
+  --purple:#5b4ba8;--purple-bg:#f4f2fc;--purple-lt:#3d3272;
+  --teal:#0f6e56;--teal-bg:#eef8f5;
+  --sig:#166b2e;--sig-bg:#edf7f1;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.1),0 0 0 1px rgba(0,0,0,.05);
+  --r:8px;--font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOP BAR ── */
+.topbar{background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.topbar-row{height:44px;display:flex;align-items:center;padding:0 14px;gap:8px}
+.back-link{font-size:11px;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);font-weight:500}
+.back-link:hover{background:var(--bg3)}
+.logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px;letter-spacing:-.02em}
+.pulse{width:8px;height:8px;border-radius:50%;background:#e74c3c;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,.4)}50%{box-shadow:0 0 0 5px rgba(231,76,60,0)}}
+.incident-badge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--red-bg);color:var(--red-lt);border:1px solid rgba(192,57,43,.2);font-weight:500;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.clock{font-size:11px;color:var(--muted);font-family:var(--mono);padding:3px 8px;background:var(--bg2);border-radius:5px;border:1px solid var(--border)}
+.btn{font-family:var(--font);font-size:12px;padding:5px 11px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--text);font-weight:500;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background .1s}
+.btn:hover{background:var(--bg2)}
+.btn-sm{font-size:11px;padding:4px 9px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary:hover{background:#1a6ab0}
+.btn-ai{background:var(--purple);border-color:var(--purple);color:#fff}
+.btn-ai:hover{background:#6b58c0}
+.btn-sig{background:var(--sig);border-color:var(--sig);color:#fff}
+.btn-green{background:var(--green);border-color:var(--green);color:#fff}
+.btn-green:hover{background:#327a21}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── METRICS STRIP ── */
+.metrics{display:flex;border-top:1px solid var(--border);height:48px;overflow-x:auto;flex-shrink:0}
+.metrics::-webkit-scrollbar{display:none}
+.met{display:flex;flex-direction:column;justify-content:center;padding:0 14px;border-right:1px solid var(--border);min-width:fit-content}
+.met-val{font-size:17px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.met-lbl{font-size:9px;color:var(--faint);margin-top:2px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.met-bar{width:80px;height:3px;background:var(--bg3);border-radius:2px;margin-top:4px;overflow:hidden}
+.met-bar-fill{height:100%;background:#27ae60;border-radius:2px;transition:width .5s}
+.c-red .met-val{color:var(--red)}
+.c-amber .met-val{color:var(--amber)}
+.c-green .met-val{color:var(--green)}
+.c-blue .met-val{color:var(--blue)}
+.c-purple .met-val{color:var(--purple)}
+.c-teal .met-val{color:var(--teal)}
+.met-div{width:1px;background:var(--border);margin:8px 0;flex-shrink:0}
+
+/* ── MAIN LAYOUT ── */
+.main{flex:1;display:grid;grid-template-columns:268px 1fr 292px;overflow:hidden}
+
+/* ── LEFT PANEL ── */
+.panel{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--card)}
+.ptabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ptab{flex:1;padding:9px 4px;font-size:12px;text-align:center;cursor:pointer;color:var(--muted);border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font);font-weight:500;transition:all .12s}
+.ptab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.filter-bar{padding:6px 8px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0;background:var(--bg2)}
+.fc{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid var(--border2);background:var(--card);cursor:pointer;color:var(--muted);font-family:var(--font);font-weight:500;transition:all .12s}
+.fc.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.scroll{flex:1;overflow-y:auto;padding:8px}
+.scroll::-webkit-scrollbar{width:3px}
+.scroll::-webkit-scrollbar-thumb{background:var(--bg4)}
+.ecard{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:9px 11px;cursor:pointer;margin-bottom:6px;box-shadow:var(--shadow);transition:border-color .1s,box-shadow .1s}
+.ecard:hover{border-color:var(--border2);box-shadow:var(--shadow-md)}
+.ecard.sel{border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,92,150,.1)}
+.ec-top{display:flex;align-items:flex-start;justify-content:space-between;gap:5px;margin-bottom:4px}
+.ec-name{font-size:12px;font-weight:600;line-height:1.3}
+.tag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.tag-u{background:var(--red-bg);color:var(--red-lt);border:1px solid rgba(192,57,43,.15)}
+.tag-m{background:var(--amber-bg);color:var(--amber-lt);border:1px solid rgba(183,98,10,.15)}
+.tag-l{background:var(--green-bg);color:var(--green-lt);border:1px solid rgba(45,106,31,.15)}
+.tag-o{background:var(--purple-bg);color:var(--purple-lt);border:1px solid rgba(91,75,168,.15)}
+.tag-f{background:var(--green-bg);color:var(--green-lt);border:1px solid rgba(45,106,31,.2)}
+.ec-meta{font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px}
+.chips{display:flex;flex-wrap:wrap;gap:3px}
+.chip{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--bg2);color:var(--muted);border:1px solid var(--border);font-weight:500}
+.add-btn-wrap{padding:8px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+
+/* ── MAP ── */
+.center-col{display:flex;flex-direction:column;overflow:hidden}
+.map-wrap{flex:1;position:relative;overflow:hidden}
+#map{position:absolute;inset:0;z-index:1}
+.leaflet-container{background:#e8e3dc}
+.rpin{width:30px;height:30px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:transform .15s;background:#fff}
+.rpin:hover{transform:scale(1.2)}
+.rpin.dim{opacity:.22;filter:grayscale(1)}
+.leaflet-popup-content-wrapper{border-radius:10px;box-shadow:var(--shadow-md)}
+.leaflet-popup-content{margin:10px 14px;font-family:var(--font);font-size:12px}
+
+.pin-filter-bar{position:absolute;bottom:56px;left:10px;right:10px;z-index:10;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;display:flex;gap:5px;flex-wrap:wrap;align-items:center;box-shadow:var(--shadow)}
+.pfc{font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid var(--border2);background:var(--card);cursor:pointer;color:var(--muted);font-family:var(--font);font-weight:500;transition:all .12s}
+.pfc.on{background:var(--text);border-color:var(--text);color:#fff}
+.map-status{position:absolute;bottom:10px;left:10px;right:10px;z-index:10;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;font-size:11px;color:var(--muted)}
+
+/* ── MATCH QUEUE ── */
+.match-strip{height:190px;border-top:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;flex-shrink:0}
+.ms-head{padding:7px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;background:var(--card)}
+.ms-scroll{flex:1;overflow-x:auto;display:flex;gap:8px;padding:8px 12px}
+.ms-scroll::-webkit-scrollbar{height:3px}
+.mcard{background:var(--card);border-radius:var(--r);border:1px solid var(--border);min-width:240px;max-width:240px;display:flex;flex-direction:column;flex-shrink:0;box-shadow:var(--shadow)}
+.mc-head{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.mc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.mc-dot.u{background:#e74c3c}.mc-dot.m{background:#e67e22}.mc-dot.l{background:#27ae60}
+.mc-ttl{font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-body{padding:7px 10px;display:grid;grid-template-columns:1fr 16px 1fr;gap:2px;align-items:center;flex:1}
+.mc-lbl{font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.mc-val{font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-sub{font-size:10px;color:var(--muted)}
+.mc-arr{color:var(--faint);text-align:center;font-size:13px}
+.mc-foot{padding:5px 10px;border-top:1px solid var(--border);display:flex;gap:4px;background:var(--bg2)}
+
+/* ── RIGHT PANEL ── */
+.rpanel{border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--card)}
+.rtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2);overflow-x:auto}
+.rtabs::-webkit-scrollbar{display:none}
+.rtab{flex-shrink:0;padding:9px 8px;font-size:11px;cursor:pointer;color:var(--muted);border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font);font-weight:500;white-space:nowrap}
+.rtab.on{color:var(--text);border-bottom-color:var(--text);background:var(--card)}
+
+/* ── AI PANEL ── */
+.ai-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.chat-area{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.chat-area::-webkit-scrollbar{width:3px}
+.chat-area::-webkit-scrollbar-thumb{background:var(--bg4)}
+.msg{display:flex;gap:8px;align-items:flex-start;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.msg.user{flex-direction:row-reverse}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.av.ai{background:var(--purple-bg);color:var(--purple-lt);border:1px solid rgba(91,75,168,.2)}
+.av.user{background:var(--blue);color:#fff}
+.bubble{max-width:84%;padding:9px 12px;border-radius:12px;font-size:12px;line-height:1.55}
+.bubble.ai{background:var(--bg2);border:1px solid var(--border);border-radius:12px 12px 12px 3px}
+.bubble.user{background:var(--blue);color:#fff;border-radius:12px 12px 3px 12px}
+.bubble p{margin-bottom:5px}.bubble p:last-child{margin-bottom:0}
+.bubble strong{font-weight:600}
+.typing{display:flex;gap:4px;padding:2px 0}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:tdot .9s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:.15s}.typing-dot:nth-child(3){animation-delay:.3s}
+@keyframes tdot{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+.quick-prompts{padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap;background:var(--bg2)}
+.qp{font-size:10px;padding:3px 9px;border-radius:12px;border:1px solid var(--border2);background:var(--card);cursor:pointer;color:var(--muted);font-family:var(--font);font-weight:500}
+.qp:hover{background:var(--purple-bg);color:var(--purple-lt);border-color:rgba(91,75,168,.3)}
+.ai-input-row{padding:10px;border-top:1px solid var(--border);display:flex;gap:7px;align-items:flex-end;background:var(--card)}
+.ai-input{flex:1;padding:8px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--bg2);font-family:var(--font);font-size:12px;color:var(--text);resize:none;min-height:36px;max-height:100px;line-height:1.4;outline:none}
+.ai-input:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(91,75,168,.1)}
+.ai-send{width:34px;height:34px;border-radius:50%;background:var(--purple);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s}
+.ai-send:hover{transform:scale(1.05)}
+.ai-send:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.ai-send svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── FEED ── */
+.feed-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.feed-list{flex:1;overflow-y:auto}
+.feed-list::-webkit-scrollbar{width:3px}
+.fi{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;cursor:pointer}
+.fi:hover{background:var(--bg2)}
+.fi-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.fi-text{font-size:12px;line-height:1.4}
+.fi-meta{display:flex;align-items:center;gap:5px;margin-top:3px}
+.fi-src{font-size:10px;padding:1px 6px;border-radius:6px;background:var(--bg2);color:var(--muted);border:1px solid var(--border);font-weight:500}
+.fi-time{font-size:10px;color:var(--faint)}
+
+/* ── EXTRACTOR PANEL ── */
+.ext-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.ext-scroll{flex:1;overflow-y:auto;padding:10px}
+.ext-scroll::-webkit-scrollbar{width:3px}
+.ext-scroll::-webkit-scrollbar-thumb{background:var(--bg4)}
+.ext-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.grp-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.grp-chip{padding:4px 10px;border-radius:14px;font-size:11px;border:1px solid var(--border2);background:var(--card);cursor:pointer;color:var(--muted);font-family:var(--font);font-weight:500;display:flex;align-items:center;gap:4px}
+.grp-chip.on{background:var(--sig);border-color:var(--sig);color:#fff}
+.grp-chip .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.7}
+.add-row{display:flex;gap:5px;margin-bottom:10px}
+input,textarea,select{font-family:var(--font);font-size:12px;color:var(--text);background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:7px 10px;width:100%}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,92,150,.1)}
+input.sm{width:auto;flex:1}
+.paste-box{min-height:120px;resize:vertical;font-size:11px;line-height:1.5;font-family:var(--mono)}
+.char-count{font-size:10px;color:var(--faint);text-align:right;margin-top:3px;margin-bottom:8px}
+.ext-actions{display:flex;gap:6px;justify-content:flex-end;margin-bottom:4px}
+.status-bar{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:var(--r);font-size:11px;margin-top:7px}
+.sb-proc{background:var(--amber-bg);color:var(--amber-lt)}
+.sb-done{background:var(--green-bg);color:var(--green-lt)}
+.sb-err{background:var(--red-bg);color:var(--red-lt)}
+.spinner{width:11px;height:11px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── RESULT CARDS ── */
+.res-card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;margin-top:9px;box-shadow:var(--shadow)}
+.res-head{padding:8px 11px;background:var(--bg2);display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border)}
+.res-grp{font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px}
+.res-dot{width:7px;height:7px;border-radius:50%;background:var(--sig)}
+.res-body{padding:11px}
+.res-sec{margin-bottom:10px}.res-sec:last-child{margin-bottom:0}
+.res-sec-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.sum-txt{font-size:12px;line-height:1.5}
+.unres-box{font-size:11px;padding:7px 9px;background:var(--red-bg);border-radius:5px;color:var(--red-lt)}
+.alist{display:flex;flex-direction:column;gap:4px}
+.aitem{display:flex;align-items:flex-start;gap:7px;padding:6px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg2)}
+.acheck{width:14px;height:14px;border-radius:3px;border:1px solid var(--border2);background:var(--card);cursor:pointer;flex-shrink:0;margin-top:1px}
+.acheck.on{background:var(--sig);border-color:var(--sig)}
+.atext{font-size:11px;line-height:1.4;flex:1}
+.atype{font-size:9px;padding:1px 6px;border-radius:6px;font-weight:600;white-space:nowrap}
+.at-need{background:var(--red-bg);color:var(--red-lt)}
+.at-donor{background:var(--teal-bg);color:var(--teal)}
+.at-org{background:var(--purple-bg);color:var(--purple-lt)}
+.at-followup{background:var(--amber-bg);color:var(--amber-lt)}
+.at-info{background:var(--blue-bg);color:var(--blue-lt)}
+.intake-row{display:flex;flex-wrap:wrap;gap:3px}
+.ichip{font-size:10px;padding:2px 7px;border-radius:7px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;gap:3px;font-weight:500}
+.people-row{display:flex;flex-wrap:wrap;gap:4px}
+.ppill{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--blue-bg);color:var(--blue-lt);border:1px solid rgba(26,92,150,.2);font-weight:500}
+.res-foot{padding:7px 11px;border-top:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;gap:7px}
+.log-st{font-size:10px;color:var(--faint)}
+.log-st.done{color:var(--green);font-weight:500}
+
+/* ── PHOTO PANEL ── */
+.photo-drop{border:2px dashed var(--border2);border-radius:var(--r);padding:28px 16px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:10px;transition:border-color .15s}
+.photo-drop:hover{border-color:var(--purple);background:var(--purple-bg)}
+.photo-preview{margin-bottom:10px}
+.photo-preview img{width:100%;border-radius:var(--r);border:1px solid var(--border)}
+
+/* ── MODALS ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{background:var(--card);border-radius:var(--r);width:100%;max-width:480px;max-height:88vh;overflow-y:auto;border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal.sm{max-width:400px}
+.modal.md{max-width:440px}
+.modal-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:600}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;font-family:var(--font);line-height:1}
+.modal-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+.modal-foot{padding:11px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--bg2);border-radius:0 0 var(--r) var(--r)}
+.flabel{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.frow{display:flex;flex-direction:column}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.type-row{display:flex;gap:5px;flex-wrap:wrap}
+.topt{padding:5px 11px;border-radius:var(--r);font-size:12px;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--muted);font-family:var(--font);font-weight:500}
+.topt.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.cat-wrap{display:flex;flex-wrap:wrap;gap:4px}
+.copt{padding:3px 9px;border-radius:10px;font-size:11px;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--muted);font-family:var(--font);font-weight:500}
+.copt.on{background:var(--blue-bg);border-color:rgba(26,92,150,.3);color:var(--blue-lt)}
+.met-edit-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.met-edit-row:last-child{border-bottom:none}
+.met-adj{width:26px;height:26px;border-radius:5px;border:1px solid var(--border2);background:var(--bg2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:var(--font)}
+.met-adj:hover{background:var(--bg3)}
+.met-inp{width:80px;text-align:right;flex-shrink:0}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-row">
+    <a href="relief-ops-launcher.html" class="back-link">← All</a>
+    <div class="logo"><div class="pulse"></div>Relief Ops</div>
+    <div class="incident-badge" id="incident-badge">Beacon + Fill the Need · Active</div>
+    <div class="spacer"></div>
+    <div class="clock" id="clock">--:-- --</div>
+    <button class="btn btn-sm" onclick="openMetEdit()">⊞ Metrics</button>
+    <button class="btn btn-sm" id="apikey-btn" onclick="openApiKeyModal()">🔑 API Key</button>
+    <button class="btn btn-sm" id="sheets-btn" onclick="openSheetsModal()">📊 Sheets</button>
+    <button class="btn btn-ai btn-sm" onclick="switchRight('ai')">✦ Ask Claude</button>
+    <button class="btn btn-sig btn-sm" onclick="openIntake()">+ Intake</button>
+  </div>
+  <div class="metrics">
+    <div class="met c-red"><div class="met-val" id="m-open">0</div><div class="met-lbl">Open needs</div></div>
+    <div class="met c-amber"><div class="met-val" id="m-prog">0</div><div class="met-lbl">In progress</div></div>
+    <div class="met c-green">
+      <div class="met-val" id="m-done">0</div><div class="met-lbl">Fulfilled</div>
+      <div class="met-bar"><div class="met-bar-fill" id="m-bar" style="width:0%"></div></div>
+    </div>
+    <div class="met-div"></div>
+    <div class="met c-teal"><div class="met-val" id="m-lbs">0</div><div class="met-lbl">Lbs aid delivered</div></div>
+    <div class="met-div"></div>
+    <div class="met c-blue"><div class="met-val" id="m-orgs">0</div><div class="met-lbl">Orgs active</div></div>
+    <div class="met c-purple"><div class="met-val" id="m-resp">0</div><div class="met-lbl">Responders</div></div>
+    <div class="met-div"></div>
+    <div class="met" style="color:#a33020"><div class="met-val" id="m-sar">0</div><div class="met-lbl">SAR ops</div></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="panel">
+    <div class="ptabs">
+      <button class="ptab on" id="ptab-needs" onclick="switchLeft('needs',this)">Needs</button>
+      <button class="ptab" id="ptab-donors" onclick="switchLeft('donors',this)">Donors</button>
+      <button class="ptab" id="ptab-orgs" onclick="switchLeft('orgs',this)">Orgs</button>
+    </div>
+    <div class="filter-bar">
+      <button class="fc on" onclick="setFilter('all',this)">All</button>
+      <button class="fc" onclick="setFilter('urgent',this)">Urgent</button>
+      <button class="fc" onclick="setFilter('food',this)">Food</button>
+      <button class="fc" onclick="setFilter('shelter',this)">Shelter</button>
+      <button class="fc" onclick="setFilter('medical',this)">Medical</button>
+    </div>
+    <div class="scroll" id="left-list"></div>
+    <div class="add-btn-wrap">
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openIntake()">+ Add intake</button>
+    </div>
+  </div>
+
+  <!-- CENTER: MAP + MATCH QUEUE -->
+  <div class="center-col">
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="pin-filter-bar">
+        <span style="font-size:10px;color:var(--faint);font-weight:600;margin-right:2px">Show:</span>
+        <button class="pfc on" onclick="togglePF('all',this)">All</button>
+        <button class="pfc" onclick="togglePF('need',this)">🔴 Needs</button>
+        <button class="pfc" onclick="togglePF('church',this)">⛪</button>
+        <button class="pfc" onclick="togglePF('distribution',this)">🏪</button>
+        <button class="pfc" onclick="togglePF('responder',this)">🚒</button>
+        <button class="pfc" onclick="togglePF('sar',this)">🔍</button>
+        <button class="pfc" onclick="togglePF('hazard',this)">⚠️</button>
+        <button class="pfc" onclick="togglePF('clinic',this)">🏥</button>
+        <button class="pfc" onclick="togglePF('shelter_site',this)">🏫</button>
+        <button class="pfc" onclick="togglePF('donor',this)">📦</button>
+      </div>
+      <div class="map-status" id="map-status">Click any pin for details · drag to pan · scroll to zoom</div>
+    </div>
+    <div class="match-strip">
+      <div class="ms-head">
+        <span style="font-size:12px;font-weight:600">Match queue</span>
+        <span class="tag tag-u" id="open-badge">0 open</span>
+        <div style="margin-left:auto;display:flex;gap:5px">
+          <button class="btn btn-sm" onclick="addMatch()">+ Match</button>
+          <button class="btn btn-sm btn-primary" onclick="autoMatch()">⚡ Auto-match</button>
+        </div>
+      </div>
+      <div class="ms-scroll" id="match-scroll"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="rpanel">
+    <div class="rtabs">
+      <button class="rtab on" id="rtab-ai" onclick="switchRight('ai')">✦ Ask Claude</button>
+      <button class="rtab" id="rtab-feed" onclick="switchRight('feed')">Feed</button>
+      <button class="rtab" id="rtab-signal" onclick="switchRight('signal')">Signal</button>
+      <button class="rtab" id="rtab-slack" onclick="switchRight('slack')">Slack</button>
+      <button class="rtab" id="rtab-photo" onclick="switchRight('photo')">📷 Notes</button>
+    </div>
+
+    <!-- AI PANEL -->
+    <div class="ai-wrap" id="panel-ai">
+      <div class="chat-area" id="chat-area"></div>
+      <div class="quick-prompts">
+        <button class="qp" onclick="qp('Give me a full status summary')">Summary</button>
+        <button class="qp" onclick="qp('What are the most urgent open needs?')">Urgent needs</button>
+        <button class="qp" onclick="qp('Which needs have no donor matched yet?')">Unmatched</button>
+        <button class="qp" onclick="qp('List all active donors and capacity')">Donors</button>
+        <button class="qp" onclick="qp('What orgs are deployed or available?')">Orgs</button>
+      </div>
+      <div class="ai-input-row">
+        <textarea class="ai-input" id="ai-input" placeholder="Ask about the dashboard, log a need, update a match…" rows="1" onkeydown="aiKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="ai-send" id="ai-send" onclick="sendAI()">
+          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- FEED PANEL -->
+    <div class="feed-wrap hidden" id="panel-feed">
+      <div class="feed-list" id="feed-list"></div>
+    </div>
+
+    <!-- SIGNAL PANEL -->
+    <div class="ext-wrap hidden" id="panel-signal">
+      <div class="ext-scroll">
+        <div class="ext-label">Signal group</div>
+        <div class="grp-chips" id="sig-groups"></div>
+        <div class="add-row"><input class="sm" id="new-sig-grp" placeholder="Add group…" onkeydown="if(event.key==='Enter')addSigGroup()"><button class="btn btn-sm" onclick="addSigGroup()">+ Add</button></div>
+        <div class="ext-label">Paste conversation</div>
+        <textarea class="paste-box" id="sig-paste" placeholder="Paste Signal conversation here…" oninput="onPasteInput('sig')"></textarea>
+        <div class="char-count" id="sig-count">0 chars</div>
+        <div class="ext-actions">
+          <button class="btn btn-sm" onclick="clearExt('sig')">Clear</button>
+          <button class="btn btn-sm btn-sig" id="sig-btn" onclick="runExtract('sig')" disabled>Extract</button>
+        </div>
+        <div id="sig-status" class="hidden"></div>
+        <div id="sig-results"></div>
+      </div>
+    </div>
+
+    <!-- SLACK PANEL -->
+    <div class="ext-wrap hidden" id="panel-slack">
+      <div class="ext-scroll">
+        <div class="ext-label">Slack channel</div>
+        <div class="grp-chips" id="slack-channels"></div>
+        <div class="add-row"><input class="sm" id="new-slack-ch" placeholder="Add channel…" onkeydown="if(event.key==='Enter')addSlackChannel()"><button class="btn btn-sm" onclick="addSlackChannel()">+ Add</button></div>
+        <div class="ext-label">Paste conversation</div>
+        <textarea class="paste-box" id="slack-paste" placeholder="Paste Slack conversation here…" oninput="onPasteInput('slack')"></textarea>
+        <div class="char-count" id="slack-count">0 chars</div>
+        <div class="ext-actions">
+          <button class="btn btn-sm" onclick="clearExt('slack')">Clear</button>
+          <button class="btn btn-sm btn-primary" id="slack-btn" onclick="runExtract('slack')" disabled>Extract</button>
+        </div>
+        <div id="slack-status" class="hidden"></div>
+        <div id="slack-results"></div>
+      </div>
+    </div>
+
+    <!-- PHOTO PANEL -->
+    <div class="ext-wrap hidden" id="panel-photo">
+      <div class="ext-scroll">
+        <div class="ext-label">Photo of handwritten notes</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Take a photo of handwritten notes, forms, or whiteboards. Claude reads and extracts all intake info.</div>
+        <div class="photo-drop" id="photo-drop" onclick="document.getElementById('photo-input').click()">
+          <div style="font-size:28px;margin-bottom:8px">📷</div>
+          <div style="font-size:13px;font-weight:500;margin-bottom:4px">Click to upload photo</div>
+          <div style="font-size:11px;color:var(--muted)">JPG, PNG, HEIC — phone photos work great</div>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="onPhotoUpload(event)">
+        <div class="photo-preview hidden" id="photo-preview">
+          <img id="photo-img" src="" alt="">
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-sm" style="color:var(--red)" onclick="clearPhoto()">Remove</button>
+            <span id="photo-name" style="font-size:11px;color:var(--muted);padding:4px 0;flex:1"></span>
+          </div>
+        </div>
+        <div class="ext-label">Note type</div>
+        <div class="grp-chips" id="note-types"></div>
+        <div class="ext-actions" style="margin-top:10px">
+          <button class="btn btn-sm btn-ai" id="photo-btn" onclick="runPhotoExtract()" disabled>Read notes</button>
+        </div>
+        <div id="photo-status" class="hidden"></div>
+        <div id="photo-results"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INTAKE MODAL -->
+<div class="overlay hidden" id="intake-overlay" onclick="if(event.target===this)closeIntake()">
+<div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-head"><div class="modal-title">New intake</div><button class="modal-close" onclick="closeIntake()">×</button></div>
+  <div class="modal-body">
+    <div class="frow"><div class="flabel">Type</div>
+      <div class="type-row">
+        <button class="topt on" onclick="setIType('need',this)">Need</button>
+        <button class="topt" onclick="setIType('donor',this)">Donor</button>
+        <button class="topt" onclick="setIType('org',this)">Org/Vol</button>
+        <button class="topt" onclick="setIType('site',this)">Site/Pin</button>
+      </div>
+    </div>
+    <div class="fgrid">
+      <div class="frow"><div class="flabel">Name</div><input id="f-name" placeholder="Name or group…"></div>
+      <div class="frow"><div class="flabel">Location</div><input id="f-loc" placeholder="Address or landmark"></div>
+    </div>
+    <div class="frow hidden" id="site-type-row">
+      <div class="flabel">Site type</div>
+      <div id="site-type-opts" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+    <div class="frow"><div class="flabel">Categories</div><div class="cat-wrap" id="cat-wrap"></div></div>
+    <div class="frow" id="pri-row"><div class="flabel">Priority</div>
+      <select id="f-pri"><option value="urgent">Urgent</option><option value="moderate" selected>Moderate</option><option value="low">Low</option></select>
+    </div>
+    <div class="fgrid">
+      <div class="frow"><div class="flabel">Source</div>
+        <select id="f-src"><option>Signal</option><option>SMS</option><option>Slack</option><option>FB Messenger</option><option>Email</option><option>Phone</option><option>Walk-in</option></select>
+      </div>
+      <div class="frow"><div class="flabel">Contact</div><input id="f-contact" placeholder="Phone or handle"></div>
+    </div>
+    <div class="frow"><div class="flabel">Notes / quantity</div><textarea id="f-notes" style="min-height:50px;resize:vertical"></textarea></div>
+  </div>
+  <div class="modal-foot"><button class="btn" onclick="closeIntake()">Cancel</button><button class="btn btn-primary" onclick="submitIntake()">Submit</button></div>
+</div>
+</div>
+
+<!-- METRICS MODAL -->
+<div class="overlay hidden" id="met-overlay" onclick="if(event.target===this)closeMetEdit()">
+<div class="modal sm" onclick="event.stopPropagation()">
+  <div class="modal-head"><div class="modal-title">Update metrics</div><button class="modal-close" onclick="closeMetEdit()">×</button></div>
+  <div class="modal-body" id="met-body"></div>
+  <div class="modal-foot"><button class="btn" onclick="closeMetEdit()">Cancel</button><button class="btn btn-primary" onclick="saveMetrics()">Save</button></div>
+</div>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="overlay hidden" id="apikey-overlay" onclick="if(event.target===this)closeApiKeyModal()">
+<div class="modal md" onclick="event.stopPropagation()">
+  <div class="modal-head"><div class="modal-title">Anthropic API key</div><button class="modal-close" onclick="closeApiKeyModal()">×</button></div>
+  <div class="modal-body">
+    <div style="font-size:12px;line-height:1.6;color:var(--muted)">Powers Ask Claude, Signal/Slack extractors, and photo notes. Stored only in your browser, sent only to Anthropic.</div>
+    <div class="frow">
+      <div class="flabel">Your API key</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="apikey-inp" placeholder="sk-ant-…" style="flex:1;font-family:var(--mono);font-size:11px">
+        <button class="btn btn-sm" onclick="toggleKeyVis()">Show</button>
+      </div>
+    </div>
+    <div id="apikey-status" style="font-size:11px;padding:4px 0"></div>
+    <div style="font-size:11px;color:var(--faint)">Get a free key at <strong style="color:var(--blue)">console.anthropic.com</strong> → API Keys → Create Key</div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" onclick="clearApiKey()" style="color:var(--red);margin-right:auto">Clear key</button>
+    <button class="btn" onclick="closeApiKeyModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveApiKey()">Save key</button>
+  </div>
+</div>
+</div>
+
+<!-- SHEETS MODAL -->
+<div class="overlay hidden" id="sheets-overlay" onclick="if(event.target===this)closeSheetsModal()">
+<div class="modal md" onclick="event.stopPropagation()">
+  <div class="modal-head"><div class="modal-title">Google Sheets sync</div><button class="modal-close" onclick="closeSheetsModal()">×</button></div>
+  <div class="modal-body">
+    <div style="font-size:12px;line-height:1.6;color:var(--muted)">Connects to a Google Sheet as a live database. Every intake and update syncs instantly. Your team can view data in real time.</div>
+    <div class="frow">
+      <div class="flabel">Google OAuth Client ID</div>
+      <input type="text" id="sheets-client-id" placeholder="your-id.apps.googleusercontent.com" style="font-family:var(--mono);font-size:11px">
+      <div style="font-size:10px;color:var(--faint);margin-top:3px">From console.cloud.google.com → APIs &amp; Services → Credentials</div>
+    </div>
+    <div class="frow">
+      <div class="flabel">Sheet ID <span style="font-weight:400;text-transform:none;color:var(--faint)">(leave blank to create new)</span></div>
+      <input type="text" id="sheets-id" placeholder="Leave blank to auto-create" style="font-family:var(--mono);font-size:11px">
+      <div style="font-size:10px;color:var(--faint);margin-top:3px">URL: docs.google.com/spreadsheets/d/<strong>THIS_PART</strong>/edit</div>
+    </div>
+    <div id="sheets-status" style="font-size:12px;padding:8px 10px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--border);display:none;line-height:1.5"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" onclick="closeSheetsModal()">Cancel</button>
+    <button class="btn btn-sm" onclick="saveSheetsSettings()">Save settings</button>
+    <button class="btn btn-primary" onclick="connectSheets()">Connect &amp; sync</button>
+  </div>
+</div>
+</div>
+
+<script>
+'use strict';
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+var API_URL = 'https://api.anthropic.com/v1/messages';
+var MODEL = 'claude-sonnet-4-20250514';
+
+var PIN_TYPES = {
+  need:         { emoji: '🔴', color: '#e74c3c', ring: true },
+  need_prog:    { emoji: '🟡', color: '#e67e22', ring: false },
+  need_done:    { emoji: '🟢', color: '#27ae60', ring: false },
+  distribution: { emoji: '🏪', color: '#2980b9', ring: false },
+  church:       { emoji: '⛪', color: '#8e44ad', ring: false },
+  responder:    { emoji: '🚒', color: '#c0392b', ring: false },
+  sar:          { emoji: '🔍', color: '#d35400', ring: false },
+  hazard:       { emoji: '⚠️', color: '#f39c12', ring: true  },
+  clinic:       { emoji: '🏥', color: '#16a085', ring: false },
+  shelter_site: { emoji: '🏫', color: '#2c3e50', ring: false },
+  donor:        { emoji: '📦', color: '#1a5276', ring: false },
+  mobile:       { emoji: '🚐', color: '#0e6655', ring: false }
+};
+
+var PF_GROUPS = {
+  need:         ['need','need_prog','need_done'],
+  church:       ['church'],
+  distribution: ['distribution'],
+  responder:    ['responder'],
+  sar:          ['sar'],
+  hazard:       ['hazard'],
+  clinic:       ['clinic'],
+  shelter_site: ['shelter_site'],
+  donor:        ['donor','mobile']
+};
+
+var CATS = ['Food','Water','Shelter','Medical','Clothing','Transport','Labor','Mental health'];
+var NOTE_TYPES = ['Intake form','Field notes','Whiteboard','Printed list','Mixed notes'];
+var DISASTER_TYPES = { flood:'🌊', tornado:'🌪️', hurricane:'🌀', wildfire:'🔥', earthquake:'⚡', winter:'❄️', chemical:'☣️', other:'🚨' };
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+var needs = [], donors = [], orgs = [], sites = [], matches = [], feedData = [];
+var metrics = {
+  lbs:  { val:0, delta:0, label:'Lbs aid delivered', unit:'lbs' },
+  orgs: { val:0, delta:0, label:'Orgs active',       unit:'orgs' },
+  resp: { val:0, delta:0, label:'First responders',  unit:'people' },
+  sar:  { val:0, delta:0, label:'SAR ops',           unit:'ops' }
+};
+var metEdit = {};
+var chatHistory = [];
+var curLeft = 'needs';
+var curFilter = 'all';
+var activePF = { all: true };
+var leftFilter = 'all';
+var curIType = 'need';
+var selCats = [];
+var selSiteType = 'shelter_site';
+var sigGroups = ['Ops General','Field Reports','Donations','Logistics'];
+var slackChannels = ['#ops-general','#field-reports','#donations','#logistics'];
+var selSigGroup = null, selSlackChannel = null;
+var selNoteType = 'Field notes';
+var photoBase64 = null, photoMime = 'image/jpeg';
+var extractResults = {};
+var leafletMap = null, mapMarkers = {};
+var geocodeCache = {};
+var sheetsToken = null, sheetsSyncing = false;
+var aiSuggest = ['Add needs and donors to generate auto-match suggestions.'];
+
+// ─── DISASTER / STORAGE ───────────────────────────────────────────────────────
+function getDisasterId() {
+  var m = window.location.hash.match(/disaster=([^&]+)/);
+  return m ? m[1] : 'default';
+}
+function getDisasterInfo() {
+  var id = getDisasterId();
+  if (id === 'default') return { name:'Relief Ops', type:'other', location:'' };
+  try {
+    var list = JSON.parse(localStorage.getItem('relief_disasters') || '[]');
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) return list[i];
+    }
+  } catch(e) {}
+  return { name:'Relief Ops', type:'other', location:'' };
+}
+var DID = getDisasterId();
+var PFX = 'relief_' + DID + '_';
+
+function saveState() {
+  try {
+    localStorage.setItem(PFX + 'needs',    JSON.stringify(needs));
+    localStorage.setItem(PFX + 'donors',   JSON.stringify(donors));
+    localStorage.setItem(PFX + 'orgs',     JSON.stringify(orgs));
+    localStorage.setItem(PFX + 'sites',    JSON.stringify(sites));
+    localStorage.setItem(PFX + 'matches',  JSON.stringify(matches));
+    localStorage.setItem(PFX + 'metrics',  JSON.stringify(metrics));
+    localStorage.setItem(PFX + 'feed',     JSON.stringify(feedData.slice(0,50)));
+    localStorage.setItem(PFX + 'chat',     JSON.stringify(chatHistory.slice(-40)));
+    var ca = document.getElementById('chat-area');
+    if (ca) localStorage.setItem(PFX + 'chatHTML', ca.innerHTML);
+    sheetsSync();
+  } catch(e) {}
+}
+
+function loadState() {
+  if (DID === 'default') return;
+  try {
+    var n = localStorage.getItem(PFX + 'needs');
+    var d = localStorage.getItem(PFX + 'donors');
+    var o = localStorage.getItem(PFX + 'orgs');
+    var s = localStorage.getItem(PFX + 'sites');
+    var m = localStorage.getItem(PFX + 'matches');
+    var mt = localStorage.getItem(PFX + 'metrics');
+    var fd = localStorage.getItem(PFX + 'feed');
+    var ch = localStorage.getItem(PFX + 'chat');
+    if (!n && !d && !o) { needs=[]; donors=[]; orgs=[]; sites=[]; matches=[]; feedData=[]; return; }
+    if (n)  needs    = JSON.parse(n);
+    if (d)  donors   = JSON.parse(d);
+    if (o)  orgs     = JSON.parse(o);
+    if (s)  sites    = JSON.parse(s);
+    if (m)  matches  = JSON.parse(m);
+    if (mt) metrics  = JSON.parse(mt);
+    if (fd) feedData = JSON.parse(fd);
+    if (ch) chatHistory = JSON.parse(ch);
+  } catch(e) {}
+}
+
+function restoreChat() {
+  if (DID === 'default') return false;
+  try {
+    var html = localStorage.getItem(PFX + 'chatHTML');
+    var ch = localStorage.getItem(PFX + 'chat');
+    var ca = document.getElementById('chat-area');
+    if (html && ca && ch && JSON.parse(ch).length > 0) {
+      ca.innerHTML = html;
+      ca.scrollTop = ca.scrollHeight;
+      var div = document.createElement('div');
+      div.style.cssText = 'text-align:center;font-size:10px;color:var(--faint);padding:6px 0;border-top:1px solid var(--border);margin-top:4px';
+      div.textContent = '— Session restored · ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + ' —';
+      ca.appendChild(div);
+      ca.scrollTop = ca.scrollHeight;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ─── HEADER ───────────────────────────────────────────────────────────────────
+function updateHeader() {
+  var info = getDisasterInfo();
+  var em = DISASTER_TYPES[info.type] || '🚨';
+  var badge = document.getElementById('incident-badge');
+  if (badge) badge.textContent = em + ' ' + info.name + (info.location ? ' · ' + info.location : '') + ' · Active';
+}
+
+// ─── CLOCK ────────────────────────────────────────────────────────────────────
+function tick() {
+  var n = new Date(), h = n.getHours(), m = n.getMinutes(), ap = h >= 12 ? 'PM' : 'AM';
+  document.getElementById('clock').textContent = (h%12||12) + ':' + (m<10?'0':'')+m + ' ' + ap;
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  var open = 0, prog = 0, done = 0;
+  for (var i = 0; i < needs.length; i++) {
+    if (needs[i].status === 'open') open++;
+    else if (needs[i].status === 'progress') prog++;
+    else if (needs[i].status === 'fulfilled') done++;
+  }
+  var tot = Math.max(open + prog + done, 1);
+  document.getElementById('m-open').textContent = open;
+  document.getElementById('m-prog').textContent = prog;
+  document.getElementById('m-done').textContent = done;
+  document.getElementById('m-bar').style.width = Math.round(done/tot*100) + '%';
+  var openBadge = 0;
+  for (var j = 0; j < matches.length; j++) if (matches[j].status === 'open') openBadge++;
+  document.getElementById('open-badge').textContent = openBadge + ' open';
+  renderMetrics();
+}
+
+function renderMetrics() {
+  var keys = ['lbs','orgs','resp','sar'];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i], m = metrics[k];
+    var el = document.getElementById('m-' + k);
+    if (el) el.textContent = m.val.toLocaleString();
+  }
+}
+
+// ─── LEFT PANEL ───────────────────────────────────────────────────────────────
+function switchLeft(tab, el) {
+  curLeft = tab;
+  leftFilter = 'all';
+  var tabs = document.querySelectorAll('.ptab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('on');
+  if (el) el.classList.add('on');
+  var fcs = document.querySelectorAll('.fc');
+  for (var j = 0; j < fcs.length; j++) {
+    fcs[j].classList.toggle('on', fcs[j].textContent === 'All');
+  }
+  renderLeft();
+  drawMap();
+}
+
+function setFilter(f, el) {
+  leftFilter = f;
+  var fcs = document.querySelectorAll('.fc');
+  for (var i = 0; i < fcs.length; i++) fcs[i].classList.remove('on');
+  if (el) el.classList.add('on');
+  renderLeft(f);
+  drawMap();
+}
+
+function renderLeft(filter) {
+  filter = filter || leftFilter;
+  var list = curLeft === 'needs' ? needs : curLeft === 'donors' ? donors : orgs;
+  var body = document.getElementById('left-list');
+  body.innerHTML = '';
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i];
+    if (filter !== 'all') {
+      if (filter === 'urgent' && item.pri !== 'urgent') continue;
+      if (['food','shelter','medical'].indexOf(filter) >= 0) {
+        var cats = item.cats || [];
+        var hasIt = false;
+        for (var c = 0; c < cats.length; c++) {
+          if (cats[c].toLowerCase() === filter) { hasIt = true; break; }
+        }
+        if (!hasIt) continue;
+      }
+    }
+    var card = document.createElement('div');
+    card.className = 'ecard';
+    var tagCls = 'tag-l', tagTxt = item.status || 'available';
+    if (curLeft === 'needs') {
+      tagCls = item.pri === 'urgent' ? 'tag-u' : item.pri === 'moderate' ? 'tag-m' : 'tag-l';
+      tagTxt = item.pri;
+    } else if (curLeft === 'orgs') {
+      tagCls = 'tag-o'; tagTxt = item.vol || 'active';
+    }
+    if (item.status === 'fulfilled') { tagCls = 'tag-f'; tagTxt = 'fulfilled'; }
+    var chips = '';
+    var cats2 = item.cats || [];
+    for (var k = 0; k < cats2.length; k++) chips += '<span class="chip">' + cats2[k] + '</span>';
+    var meta = curLeft === 'needs' ?
+      '<span>📍 ' + (item.loc||'TBD') + '</span><span>' + (item.src||'') + '</span><span>' + (item.time||'now') + '</span>' :
+      curLeft === 'donors' ?
+      '<span>📍 ' + (item.loc||'TBD') + '</span><span>' + (item.cap||'') + '</span><span>' + (item.time||'now') + '</span>' :
+      '<span>📍 ' + (item.loc||'TBD') + '</span><span>' + (item.vol||'') + '</span><span>' + (item.time||'now') + '</span>';
+    card.innerHTML =
+      '<div class="ec-top"><div class="ec-name">' + item.name + '</div><span class="tag ' + tagCls + '">' + tagTxt + '</span></div>' +
+      '<div class="ec-meta">' + meta + '</div>' +
+      '<div class="chips">' + chips + '</div>';
+    (function(c) {
+      c.onclick = function() {
+        var all = document.querySelectorAll('.ecard');
+        for (var x = 0; x < all.length; x++) all[x].classList.remove('sel');
+        c.classList.add('sel');
+      };
+    })(card);
+    body.appendChild(card);
+  }
+}
+
+// ─── MAP ──────────────────────────────────────────────────────────────────────
+function initMap() {
+  leafletMap = L.map('map', { center:[36.1627,-86.7816], zoom:12, zoomControl:true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom:19
+  }).addTo(leafletMap);
+}
+
+function pinMatchesFilter(item) {
+  if (leftFilter === 'all') return true;
+  var cats = item.cats || [];
+  if (!cats.length) return true;
+  if (leftFilter === 'urgent') return item.pri === 'urgent';
+  for (var i = 0; i < cats.length; i++) {
+    if (cats[i].toLowerCase() === leftFilter) return true;
+  }
+  return false;
+}
+
+function pinVisible(item) {
+  if (activePF.all) return true;
+  var pt = item.pinType || 'need';
+  for (var k in PF_GROUPS) {
+    if (activePF[k]) {
+      var grp = PF_GROUPS[k];
+      for (var i = 0; i < grp.length; i++) if (grp[i] === pt) return true;
+    }
+  }
+  return false;
+}
+
+function allPins() {
+  return needs.concat(donors).concat(orgs).concat(sites);
+}
+
+function drawMap() {
+  if (!leafletMap) return;
+  for (var id in mapMarkers) leafletMap.removeLayer(mapMarkers[id]);
+  mapMarkers = {};
+  var pins = allPins();
+  for (var i = 0; i < pins.length; i++) {
+    placePinOnMap(pins[i]);
+  }
+}
+
+function placePinOnMap(item) {
+  if (!pinVisible(item)) return;
+  var matched = pinMatchesFilter(item);
+  var pt = PIN_TYPES[item.pinType || 'need'] || PIN_TYPES.need;
+  var icon = L.divIcon({
+    className: '',
+    html: '<div class="rpin' + (matched ? '' : ' dim') + '" style="border-color:' + (matched ? pt.color : '#ccc') + ';background:' + (matched ? '#fff' : '#f0f0f0') + '">' + pt.emoji + '</div>',
+    iconSize: [30,30], iconAnchor: [15,15], popupAnchor: [0,-18]
+  });
+  var popup =
+    '<div style="min-width:170px">' +
+    '<div style="font-weight:600;font-size:13px;margin-bottom:4px">' + item.name + '</div>' +
+    '<div style="color:var(--muted);font-size:11px;margin-bottom:5px">📍 ' + (item.loc||'TBD') + '</div>' +
+    (item.cats && item.cats.length ? '<div style="display:flex;gap:3px;flex-wrap:wrap">' + item.cats.map(function(c){return '<span style="font-size:10px;padding:2px 6px;background:#f0f6fd;color:#113d66;border-radius:6px;font-weight:500">' + c + '</span>';}).join('') + '</div>' : '') +
+    (item.pri ? '<div style="margin-top:5px;font-size:10px;font-weight:600;color:' + (item.pri==='urgent'?'#8b2420':item.pri==='moderate'?'#7a4208':'#1e4815') + '">' + item.pri.toUpperCase() + '</div>' : '') +
+    '</div>';
+  if (item.lat && item.lng) {
+    var marker = L.marker([item.lat, item.lng], {icon: icon}).bindPopup(popup).addTo(leafletMap);
+    mapMarkers[item.id] = marker;
+  } else if (item.loc && item.loc !== 'TBD') {
+    geocode(item, icon, popup);
+  } else {
+    var ctr = leafletMap.getCenter();
+    var jx = (Math.random()-0.5)*0.05, jy = (Math.random()-0.5)*0.05;
+    var marker2 = L.marker([ctr.lat+jx, ctr.lng+jy], {icon:icon}).bindPopup(popup).addTo(leafletMap);
+    mapMarkers[item.id] = marker2;
+  }
+}
+
+function geocode(item, icon, popup) {
+  var addr = item.loc;
+  if (geocodeCache[addr]) {
+    item.lat = geocodeCache[addr].lat; item.lng = geocodeCache[addr].lng;
+    var m = L.marker([item.lat, item.lng], {icon:icon}).bindPopup(popup).addTo(leafletMap);
+    mapMarkers[item.id] = m;
+    return;
+  }
+  var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(addr) + '&limit=1';
+  fetch(url, {headers:{'User-Agent':'ReliefOpsDashboard/1.0'}}).then(function(r){return r.json();}).then(function(data){
+    if (data && data[0]) {
+      var lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+      geocodeCache[addr] = {lat:lat, lng:lng};
+      item.lat = lat; item.lng = lng;
+      var m = L.marker([lat, lng], {icon:icon}).bindPopup(popup).addTo(leafletMap);
+      mapMarkers[item.id] = m;
+    }
+  }).catch(function(){});
+}
+
+function togglePF(key, el) {
+  if (key === 'all') {
+    activePF = {all:true};
+    var pfcs = document.querySelectorAll('.pfc');
+    for (var i = 0; i < pfcs.length; i++) pfcs[i].classList.remove('on');
+    el.classList.add('on');
+  } else {
+    activePF.all = false;
+    document.querySelectorAll('.pfc')[0].classList.remove('on');
+    if (activePF[key]) {
+      delete activePF[key];
+      el.classList.remove('on');
+    } else {
+      activePF[key] = true;
+      el.classList.add('on');
+    }
+    if (Object.keys(activePF).length === 0) {
+      activePF = {all:true};
+      document.querySelectorAll('.pfc')[0].classList.add('on');
+    }
+  }
+  drawMap();
+}
+
+// ─── MATCH QUEUE ──────────────────────────────────────────────────────────────
+function renderMatches() {
+  var s = document.getElementById('match-scroll');
+  s.innerHTML = '';
+  for (var i = 0; i < matches.length; i++) {
+    var m = matches[i];
+    var dotCls = m.pri === 'urgent' ? 'u' : m.pri === 'moderate' ? 'm' : 'l';
+    var tagCls = m.status === 'open' ? 'tag-u' : m.status === 'progress' ? 'tag-m' : 'tag-f';
+    var tagTxt = m.status === 'progress' ? 'in progress' : m.status;
+    var foot = '';
+    if (m.status === 'open') foot += '<button class="btn btn-sm btn-primary" onclick="confirmMatch(\'' + m.id + '\')">Confirm</button>';
+    if (m.status !== 'fulfilled') foot += '<button class="btn btn-sm btn-green" onclick="fulfillMatch(\'' + m.id + '\')">✓ Fulfilled</button>';
+    if (m.status === 'fulfilled') foot += '<span style="font-size:10px;color:var(--green);font-weight:600">✓ Complete</span>';
+    var card = document.createElement('div');
+    card.className = 'mcard';
+    card.innerHTML =
+      '<div class="mc-head"><div class="mc-dot ' + dotCls + '"></div><div class="mc-ttl">' + m.need + '</div><span class="tag ' + tagCls + '" style="font-size:10px">' + tagTxt + '</span></div>' +
+      '<div class="mc-body">' +
+        '<div><div class="mc-lbl">Donor</div><div class="mc-val">' + m.donor + '</div><div class="mc-sub">' + (m.dd||'') + '</div></div>' +
+        '<div class="mc-arr">→</div>' +
+        '<div><div class="mc-lbl">Org</div><div class="mc-val">' + m.org + '</div><div class="mc-sub">' + (m.od||'') + '</div></div>' +
+      '</div>' +
+      '<div class="mc-foot">' + foot + '</div>';
+    s.appendChild(card);
+  }
+}
+
+function confirmMatch(id) {
+  for (var i = 0; i < matches.length; i++) {
+    if (matches[i].id === id && matches[i].status === 'open') {
+      matches[i].status = 'progress';
+      addFeed('#e67e22','Match confirmed: '+matches[i].need+' → '+matches[i].donor,'Dashboard','now',null);
+      renderMatches(); updateStats(); drawMap(); saveState();
+      break;
+    }
+  }
+}
+
+function fulfillMatch(id) {
+  for (var i = 0; i < matches.length; i++) {
+    if (matches[i].id === id && matches[i].status !== 'fulfilled') {
+      matches[i].status = 'fulfilled';
+      var m = matches[i];
+      for (var j = 0; j < needs.length; j++) {
+        if (needs[j].name.toLowerCase().indexOf(m.need.toLowerCase().slice(0,6)) >= 0) {
+          needs[j].status = 'fulfilled'; needs[j].pinType = 'need_done'; break;
+        }
+      }
+      metrics.lbs.val += Math.floor(Math.random()*150+80);
+      metrics.lbs.delta += Math.floor(Math.random()*50+20);
+      addFeed('#27ae60','Need fulfilled: '+m.need+' → '+m.donor,'Dashboard','now',null);
+      renderMatches(); updateStats(); renderLeft(); drawMap(); renderMetrics(); saveState();
+      break;
+    }
+  }
+}
+
+function addMatch() {
+  matches.unshift({id:'m'+Date.now(),need:'New need',donor:'—',org:'—',nd:'',dd:'',od:'',pri:'moderate',status:'open'});
+  renderMatches(); updateStats();
+}
+
+function autoMatch() {
+  addFeed('#8e44ad','⚡ Auto-match: analyzing needs and donors…','AI','now',null);
+}
+
+// ─── FEED ─────────────────────────────────────────────────────────────────────
+function renderFeed() {
+  var body = document.getElementById('feed-list');
+  body.innerHTML = '';
+  for (var i = 0; i < feedData.length; i++) {
+    var item = feedData[i];
+    var actBtn = item.act ? '<div style="margin-top:4px"><button class="btn btn-sm" style="font-size:10px;padding:2px 7px" onclick="logFeedItem(\'' + item.id + '\',\'' + item.act + '\')">+ Log as ' + item.act + '</button></div>' : '';
+    var el = document.createElement('div');
+    el.className = 'fi';
+    el.innerHTML =
+      '<div class="fi-dot" style="background:' + item.color + '"></div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="fi-text">' + item.text + '</div>' +
+        '<div class="fi-meta"><span class="fi-src">' + item.src + '</span><span class="fi-time">' + item.time + ' ago</span></div>' +
+        actBtn +
+      '</div>';
+    body.appendChild(el);
+  }
+}
+
+function addFeed(color, text, src, time, act) {
+  feedData.unshift({id:'f'+Date.now(), color:color, text:text, src:src, time:time||'now', act:act});
+  if (feedData.length > 50) feedData.pop();
+  renderFeed();
+}
+
+function logFeedItem(fid, type) {
+  for (var i = 0; i < feedData.length; i++) {
+    if (feedData[i].id === fid) { feedData[i].act = null; break; }
+  }
+  var rx = 0.2 + Math.random()*0.6, ry = 0.2 + Math.random()*0.6;
+  if (type === 'Need') needs.unshift({id:'n'+Date.now(),name:'From feed',loc:'TBD',cats:['Unspecified'],pri:'moderate',src:'Feed',status:'open',time:'now',x:rx,y:ry,pinType:'need'});
+  else if (type === 'Donor') donors.unshift({id:'d'+Date.now(),name:'From feed',loc:'TBD',cats:['Unspecified'],cap:'TBD',time:'now',x:rx,y:ry,pinType:'donor'});
+  else if (type === 'Org') {
+    orgs.unshift({id:'o'+Date.now(),name:'From feed',loc:'TBD',cats:['Unspecified'],vol:'TBD',time:'now',x:rx,y:ry,pinType:'mobile'});
+    metrics.orgs.val++; metrics.orgs.delta++;
+  }
+  renderFeed(); renderLeft(); updateStats(); drawMap(); saveState();
+}
+
+// ─── RIGHT PANEL TABS ─────────────────────────────────────────────────────────
+function switchRight(panel) {
+  var panels = ['ai','feed','signal','slack','photo'];
+  for (var i = 0; i < panels.length; i++) {
+    var p = document.getElementById('panel-' + panels[i]);
+    var t = document.getElementById('rtab-' + panels[i]);
+    if (!p || !t) continue;
+    if (panels[i] === panel) {
+      p.classList.remove('hidden');
+      p.style.display = 'flex';
+      p.style.flexDirection = 'column';
+      p.style.flex = '1';
+      p.style.overflow = 'hidden';
+      t.classList.add('on');
+    } else {
+      p.classList.add('hidden');
+      p.style.display = 'none';
+      t.classList.remove('on');
+    }
+  }
+}
+
+// ─── API KEY ──────────────────────────────────────────────────────────────────
+function getApiKey() { return localStorage.getItem('relief_api_key') || ''; }
+
+function openApiKeyModal() {
+  var inp = document.getElementById('apikey-inp');
+  inp.value = getApiKey();
+  var status = document.getElementById('apikey-status');
+  var key = getApiKey();
+  if (key) { status.textContent = '✓ Key saved — ' + key.substring(0,12) + '…'; status.style.color = 'var(--green)'; }
+  else { status.textContent = 'No key saved yet.'; status.style.color = 'var(--faint)'; }
+  document.getElementById('apikey-overlay').classList.remove('hidden');
+}
+
+function closeApiKeyModal() { document.getElementById('apikey-overlay').classList.add('hidden'); }
+
+function toggleKeyVis() {
+  var inp = document.getElementById('apikey-inp');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function saveApiKey() {
+  var key = document.getElementById('apikey-inp').value.trim();
+  if (!key) return;
+  localStorage.setItem('relief_api_key', key);
+  var btn = document.getElementById('apikey-btn');
+  if (btn) { btn.textContent = '🔑 Key ✓'; btn.style.color = 'var(--green)'; }
+  var status = document.getElementById('apikey-status');
+  status.textContent = '✓ Key saved!'; status.style.color = 'var(--green)';
+  setTimeout(closeApiKeyModal, 800);
+}
+
+function clearApiKey() {
+  if (!confirm('Remove API key? AI features will stop working.')) return;
+  localStorage.removeItem('relief_api_key');
+  document.getElementById('apikey-inp').value = '';
+  var btn = document.getElementById('apikey-btn');
+  if (btn) { btn.textContent = '🔑 API Key'; btn.style.color = 'var(--red)'; }
+}
+
+function updateApiKeyBtn() {
+  var btn = document.getElementById('apikey-btn');
+  if (!btn) return;
+  var has = !!getApiKey();
+  btn.textContent = has ? '🔑 Key ✓' : '🔑 API Key';
+  btn.style.color = has ? 'var(--green)' : 'var(--red)';
+}
+
+// ─── ASK CLAUDE ───────────────────────────────────────────────────────────────
+function buildContext() {
+  var openNeeds = [], inProg = [], done2 = [];
+  for (var i = 0; i < needs.length; i++) {
+    if (needs[i].status === 'open') openNeeds.push(needs[i]);
+    else if (needs[i].status === 'progress') inProg.push(needs[i]);
+    else done2.push(needs[i]);
+  }
+  var needsList = openNeeds.map(function(n){ return '- ['+n.id+'] '+n.name+' | '+n.loc+' | '+(n.cats||[]).join(', ')+' | '+n.pri+' | '+n.src; }).join('\n') || 'None';
+  var progList  = inProg.map(function(n){ return '- ['+n.id+'] '+n.name+' | '+n.loc; }).join('\n') || 'None';
+  var donList   = donors.map(function(d){ return '- ['+d.id+'] '+d.name+' | '+d.loc+' | '+(d.cats||[]).join(', ')+' | '+d.cap; }).join('\n') || 'None';
+  var orgList   = orgs.map(function(o){ return '- ['+o.id+'] '+o.name+' | '+o.loc+' | '+(o.cats||[]).join(', ')+' | '+o.vol; }).join('\n') || 'None';
+  var matchList = matches.map(function(m){ return '- '+m.need+' to '+m.donor+' via '+m.org+' | '+m.status; }).join('\n') || 'None';
+  return 'You are an AI assistant built into the Relief Ops disaster coordination dashboard for Beacon Rescue and Fill the Need. ALL data lives in localStorage - there is no separate backend or dev team. You have FULL control.\n\n' +
+    'OPEN NEEDS (' + openNeeds.length + '):\n' + needsList + '\n\n' +
+    'IN PROGRESS (' + inProg.length + '):\n' + progList + '\n\n' +
+    'DONORS (' + donors.length + '):\n' + donList + '\n\n' +
+    'ORGS (' + orgs.length + '):\n' + orgList + '\n\n' +
+    'MATCHES (' + matches.length + '):\n' + matchList + '\n\n' +
+    'METRICS: ' + openNeeds.length + ' open | ' + inProg.length + ' in progress | ' + done2.length + ' fulfilled | ' + metrics.lbs.val + ' lbs | ' + metrics.orgs.val + ' orgs | ' + metrics.resp.val + ' responders | ' + metrics.sar.val + ' SAR\n\n' +
+    'COMMANDS you can append:\n' +
+    'Log need: <<<ACTION:{"type":"need","name":"...","loc":"...","cats":[...],"pri":"urgent|moderate|low","src":"Signal|SMS|Slack|Phone|Walk-in"}>>>\n' +
+    'Log donor: <<<ACTION:{"type":"donor","name":"...","loc":"...","cats":[...],"cap":"..."}>>>\n' +
+    'Log org: <<<ACTION:{"type":"org","name":"...","loc":"...","cats":[],"vol":"..."}>>>\n' +
+    'Update status: <<<UPDATE:{"target":"name","field":"status","value":"fulfilled|progress|open"}>>>\n' +
+    'Fix metric: <<<METRIC:{"key":"lbs|orgs|resp|sar","delta":500}>>>\n\n' +
+    'Be concise and operational. Fix discrepancies directly. Use **bold** for urgent. Under 200 words unless summary requested.';
+}
+
+function addMsg(role, text) {
+  var area = document.getElementById('chat-area');
+  var msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+  var av = document.createElement('div');
+  av.className = 'av ' + role;
+  av.textContent = role === 'ai' ? 'C' : 'U';
+  var bubble = document.createElement('div');
+  bubble.className = 'bubble ' + role;
+  var display = text.replace(/<<<[A-Z]+:\{[\s\S]*?\}>>>/g,'').trim();
+  display = display.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  display = display.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
+  bubble.innerHTML = '<p>' + display + '</p>';
+  msg.appendChild(av); msg.appendChild(bubble);
+  area.appendChild(msg);
+  area.scrollTop = area.scrollHeight;
+  processActions(text);
+}
+
+function processActions(text) {
+  var actRe = /<<<ACTION:\{([\s\S]*?)\}>>>/g, m;
+  while ((m = actRe.exec(text)) !== null) {
+    try { executeAction(JSON.parse('{' + m[1] + '}')); } catch(e) {}
+  }
+  var updRe = /<<<UPDATE:\{([\s\S]*?)\}>>>/g;
+  while ((m = updRe.exec(text)) !== null) {
+    try { executeUpdate(JSON.parse('{' + m[1] + '}')); } catch(e) {}
+  }
+  var metRe = /<<<METRIC:\{([\s\S]*?)\}>>>/g;
+  while ((m = metRe.exec(text)) !== null) {
+    try { executeMetricUpdate(JSON.parse('{' + m[1] + '}')); } catch(e) {}
+  }
+}
+
+function executeAction(data) {
+  var rx = 0.2+Math.random()*0.6, ry = 0.2+Math.random()*0.6;
+  var id = (data.type||'n')[0] + Date.now();
+  if (data.type === 'need') {
+    needs.unshift({id:id,name:data.name||'Need',loc:data.loc||'TBD',cats:data.cats||[],pri:data.pri||'moderate',src:data.src||'Claude',status:'open',time:'now',x:rx,y:ry,pinType:'need'});
+    addFeed('#2980b9','AI logged need: '+data.name,'Claude','now',null);
+  } else if (data.type === 'donor') {
+    donors.unshift({id:id,name:data.name||'Donor',loc:data.loc||'TBD',cats:data.cats||[],cap:data.cap||'TBD',time:'now',x:rx,y:ry,pinType:'donor'});
+    addFeed('#16a085','AI logged donor: '+data.name,'Claude','now',null);
+  } else if (data.type === 'org') {
+    orgs.unshift({id:id,name:data.name||'Org',loc:data.loc||'TBD',cats:data.cats||[],vol:data.vol||'TBD',time:'now',x:rx,y:ry,pinType:'mobile'});
+    metrics.orgs.val++; metrics.orgs.delta++;
+    addFeed('#8e44ad','AI logged org: '+data.name,'Claude','now',null);
+  }
+  renderLeft(); updateStats(); drawMap(); saveState();
+}
+
+function executeUpdate(data) {
+  var target = (data.target||'').toLowerCase().slice(0,8);
+  for (var i = 0; i < needs.length; i++) {
+    if (needs[i].name.toLowerCase().indexOf(target) >= 0 && data.field === 'status') {
+      needs[i].status = data.value;
+      needs[i].pinType = data.value==='fulfilled'?'need_done':data.value==='progress'?'need_prog':'need';
+      break;
+    }
+  }
+  renderLeft(); updateStats(); drawMap();
+}
+
+function executeMetricUpdate(data) {
+  if (metrics[data.key]) {
+    metrics[data.key].val += (data.delta||0);
+    metrics[data.key].delta += (data.delta||0);
+    renderMetrics();
+  }
+}
+
+function showTyping() {
+  var area = document.getElementById('chat-area');
+  var msg = document.createElement('div');
+  msg.className = 'msg ai'; msg.id = 'typing';
+  var av = document.createElement('div'); av.className='av ai'; av.textContent='C';
+  var bubble = document.createElement('div'); bubble.className='bubble ai';
+  bubble.innerHTML = '<div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  msg.appendChild(av); msg.appendChild(bubble);
+  area.appendChild(msg); area.scrollTop = area.scrollHeight;
+}
+
+function removeTyping() { var t = document.getElementById('typing'); if (t) t.remove(); }
+
+function sendAI() {
+  var inp = document.getElementById('ai-input');
+  var text = inp.value.trim();
+  if (!text) return;
+  var key = getApiKey();
+  if (!key) { openApiKeyModal(); return; }
+  inp.value = ''; inp.style.height = '36px';
+  addMsg('user', text);
+  chatHistory.push({role:'user', content:text});
+  document.getElementById('ai-send').disabled = true;
+  showTyping();
+  fetch(API_URL, {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 700,
+      system: buildContext(),
+      messages: chatHistory.slice(-12)
+    })
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(e){ throw new Error(e.error&&e.error.message||'API '+r.status); });
+    return r.json();
+  }).then(function(data) {
+    var reply = data.content[0].text;
+    chatHistory.push({role:'assistant', content:reply});
+    removeTyping(); addMsg('ai', reply); saveState();
+  }).catch(function(err) {
+    removeTyping();
+    addMsg('ai', 'Error: ' + err.message + '\n\nClick **🔑 API Key** to check your key.');
+  }).finally(function() {
+    document.getElementById('ai-send').disabled = false;
+  });
+}
+
+function qp(text) {
+  switchRight('ai');
+  document.getElementById('ai-input').value = text;
+  sendAI();
+}
+
+function aiKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAI(); }
+}
+
+function autoResize(el) {
+  el.style.height = '36px';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ─── EXTRACTOR ────────────────────────────────────────────────────────────────
+function onPasteInput(type) {
+  var paste = document.getElementById(type + '-paste').value;
+  document.getElementById(type + '-count').textContent = paste.length.toLocaleString() + ' chars';
+  var hasGroup = type === 'sig' ? !!selSigGroup : !!selSlackChannel;
+  document.getElementById(type + '-btn').disabled = !(paste.trim().length > 10 && hasGroup);
+}
+
+function clearExt(type) {
+  document.getElementById(type + '-paste').value = '';
+  document.getElementById(type + '-count').textContent = '0 chars';
+  document.getElementById(type + '-results').innerHTML = '';
+  var st = document.getElementById(type + '-status');
+  st.classList.add('hidden'); st.className = 'hidden';
+  document.getElementById(type + '-btn').disabled = true;
+}
+
+function showExtStatus(type, kind, msg) {
+  var el = document.getElementById(type + '-status');
+  el.className = 'status-bar sb-' + kind;
+  el.innerHTML = kind === 'proc' ? '<div class="spinner"></div>' + msg : '<span>' + (kind==='done'?'✓':'✕') + '</span> ' + msg;
+}
+
+function runExtract(type) {
+  var key = getApiKey();
+  if (!key) { openApiKeyModal(); return; }
+  var paste = document.getElementById(type + '-paste').value.trim();
+  var group = type === 'sig' ? selSigGroup : selSlackChannel;
+  if (!paste || !group) return;
+  var btn = document.getElementById(type + '-btn');
+  btn.disabled = true;
+  showExtStatus(type, 'proc', 'Analyzing…');
+  document.getElementById(type + '-results').innerHTML = '';
+  var prompt = 'Analyze this ' + (type==='sig'?'Signal':'Slack') + ' conversation from "' + group + '".\nCONVERSATION:\n"""\n' + paste.substring(0,12000) + '\n"""\nRespond with ONLY valid JSON:\n{"summary":"2-4 sentences","actionItems":[{"id":"a1","text":"","type":"need|donor|org|followup|info","priority":"urgent|moderate|low","assignedTo":null,"location":null,"done":false}],"intakes":[{"type":"need|donor|org","name":"","location":"","categories":[],"quantity":null,"contact":null,"priority":"moderate","summary":""}],"people":[],"keyLocations":[],"unresolved":null}';
+  fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body: JSON.stringify({model:MODEL, max_tokens:2000, system:'You are a disaster relief intake extractor. Respond ONLY with valid JSON, no markdown.', messages:[{role:'user',content:prompt}]})
+  }).then(function(r){
+    if (!r.ok) return r.json().then(function(e){throw new Error(e.error&&e.error.message||'API '+r.status);});
+    return r.json();
+  }).then(function(data){
+    var raw = data.content[0].text.trim().replace(/^```json\s*/,'').replace(/\s*```$/,'');
+    var result = JSON.parse(raw);
+    result.group = group; result.timestamp = new Date().toISOString(); result.id = type + '-' + Date.now();
+    extractResults[result.id] = result;
+    renderExtResult(result, type + '-results');
+    showExtStatus(type, 'done', (result.actionItems||[]).length + ' actions · ' + (result.intakes||[]).length + ' intakes');
+    addFeed(type==='sig'?'#166b2e':'#8e44ad', (type==='sig'?'Signal':'Slack')+': '+group+' — '+(result.summary||'').substring(0,55)+'…', type==='sig'?'Signal':'Slack', 'now', null);
+  }).catch(function(err){
+    showExtStatus(type, 'err', 'Error: ' + err.message);
+  }).finally(function(){
+    btn.disabled = false;
+    onPasteInput(type);
+  });
+}
+
+function renderExtResult(r, containerId, append) {
+  var wrap = document.getElementById(containerId);
+  var ts = new Date(r.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  var html = '<div class="res-card"><div class="res-head"><div class="res-grp"><div class="res-dot"></div>' + r.group + '</div><span style="font-size:10px;color:var(--faint);margin-left:auto">' + ts + '</span></div><div class="res-body">';
+  html += '<div class="res-sec"><div class="res-sec-title">Summary</div><div class="sum-txt">' + (r.summary||'No summary.') + '</div></div>';
+  if (r.unresolved) html += '<div class="res-sec"><div class="res-sec-title" style="color:var(--red)">Unresolved</div><div class="unres-box">' + r.unresolved + '</div></div>';
+  if (r.actionItems && r.actionItems.length) {
+    html += '<div class="res-sec"><div class="res-sec-title">Actions (' + r.actionItems.length + ')</div><div class="alist">';
+    for (var i = 0; i < r.actionItems.length; i++) {
+      var a = r.actionItems[i];
+      var tc = {need:'at-need',donor:'at-donor',org:'at-org',followup:'at-followup',info:'at-info'}[a.type]||'at-info';
+      html += '<div class="aitem" id="ai-' + r.id + '-' + i + '"><div class="acheck" onclick="togCheck(this)"></div><div class="atext">' + a.text + '</div><span class="atype ' + tc + '">' + a.type + '</span>' + (a.priority==='urgent'?'<span class="atype at-need">!</span>':'') + '</div>';
+    }
+    html += '</div></div>';
+  }
+  if (r.intakes && r.intakes.length) {
+    html += '<div class="res-sec"><div class="res-sec-title">Intakes (' + r.intakes.length + ')</div><div class="intake-row">';
+    for (var j = 0; j < r.intakes.length; j++) {
+      var int = r.intakes[j];
+      var dc = int.type==='need'?'#e74c3c':int.type==='donor'?'#16a085':'#8e44ad';
+      html += '<div class="ichip"><div style="width:5px;height:5px;border-radius:50%;background:' + dc + '"></div>' + (int.name||'Unknown') + '<span style="color:var(--faint)">·' + int.type + '</span></div>';
+    }
+    html += '</div></div>';
+  }
+  if (r.people && r.people.length) {
+    html += '<div class="res-sec"><div class="res-sec-title">People</div><div class="people-row">';
+    for (var k = 0; k < r.people.length; k++) html += '<span class="ppill">' + r.people[k] + '</span>';
+    html += '</div></div>';
+  }
+  html += '</div><div class="res-foot"><span class="log-st" id="ls-' + r.id + '">Not logged</span><div style="margin-left:auto;display:flex;gap:5px"><button class="btn btn-sm" onclick="copyResult(\'' + r.id + '\')">Copy</button><button class="btn btn-sm btn-sig" onclick="logResult(\'' + r.id + '\')">Log intakes</button></div></div></div>';
+  if (append) wrap.innerHTML += html; else wrap.innerHTML = html;
+}
+
+function togCheck(el) { el.classList.toggle('on'); }
+
+function copyResult(rid) {
+  var r = extractResults[rid]; if (!r) return;
+  var lines = ['Group: '+r.group, 'Time: '+new Date(r.timestamp).toLocaleString(), '', 'SUMMARY', r.summary||''];
+  if (r.unresolved) lines.push('','UNRESOLVED',r.unresolved);
+  if (r.actionItems && r.actionItems.length) {
+    lines.push('','ACTION ITEMS');
+    for (var i = 0; i < r.actionItems.length; i++) lines.push((i+1)+'. ['+r.actionItems[i].type.toUpperCase()+'] '+r.actionItems[i].text);
+  }
+  if (r.intakes && r.intakes.length) {
+    lines.push('','INTAKES');
+    for (var j = 0; j < r.intakes.length; j++) {
+      var int = r.intakes[j];
+      lines.push('- '+int.type.toUpperCase()+': '+(int.name||'?')+' | '+(int.categories||[]).join(', ')+' | '+(int.location||'TBD'));
+    }
+  }
+  navigator.clipboard.writeText(lines.join('\n')).catch(function(){});
+}
+
+function logResult(rid) {
+  var r = extractResults[rid]; if (!r) return;
+  var intakes = r.intakes || [];
+  for (var i = 0; i < intakes.length; i++) {
+    var int = intakes[i];
+    var rx = 0.2+Math.random()*0.6, ry = 0.2+Math.random()*0.6;
+    var id = int.type[0] + Date.now() + i;
+    if (int.type === 'need') {
+      needs.unshift({id:id,name:int.name||'Intake',loc:int.location||'TBD',cats:int.categories||[],pri:int.priority||'moderate',src:'Signal',status:'open',time:'now',x:rx,y:ry,pinType:'need'});
+    } else if (int.type === 'donor') {
+      donors.unshift({id:id,name:int.name||'Donor',loc:int.location||'TBD',cats:int.categories||[],cap:int.quantity||'TBD',time:'now',x:rx,y:ry,pinType:'donor'});
+    } else {
+      orgs.unshift({id:id,name:int.name||'Org',loc:int.location||'TBD',cats:int.categories||[],vol:int.quantity||'TBD',time:'now',x:rx,y:ry,pinType:'mobile'});
+      metrics.orgs.val++; metrics.orgs.delta++;
+    }
+  }
+  var lsEl = document.getElementById('ls-' + rid);
+  if (lsEl) { lsEl.textContent = 'Logged ' + intakes.length + ' intakes'; lsEl.className = 'log-st done'; }
+  renderLeft(); updateStats(); drawMap(); renderMetrics(); saveState();
+  addFeed('#166b2e', 'Logged ' + intakes.length + ' intakes from ' + r.group, 'Extract', 'now', null);
+}
+
+// ─── SIGNAL GROUPS ────────────────────────────────────────────────────────────
+function renderSigGroups() {
+  var g = document.getElementById('sig-groups'); if (!g) return;
+  g.innerHTML = '';
+  for (var i = 0; i < sigGroups.length; i++) {
+    var name = sigGroups[i];
+    var chip = document.createElement('button');
+    chip.className = 'grp-chip' + (name === selSigGroup ? ' on' : '');
+    chip.innerHTML = '<span class="dot"></span>' + name;
+    (function(n, c) {
+      c.onclick = function() {
+        selSigGroup = selSigGroup === n ? null : n;
+        renderSigGroups(); onPasteInput('sig');
+      };
+    })(name, chip);
+    g.appendChild(chip);
+  }
+}
+
+function addSigGroup() {
+  var inp = document.getElementById('new-sig-grp');
+  var name = inp.value.trim(); if (!name || sigGroups.indexOf(name) >= 0) return;
+  sigGroups.push(name); selSigGroup = name; inp.value = '';
+  renderSigGroups(); onPasteInput('sig');
+}
+
+// ─── SLACK CHANNELS ───────────────────────────────────────────────────────────
+function renderSlackChannels() {
+  var g = document.getElementById('slack-channels'); if (!g) return;
+  g.innerHTML = '';
+  for (var i = 0; i < slackChannels.length; i++) {
+    var name = slackChannels[i];
+    var chip = document.createElement('button');
+    chip.className = 'grp-chip' + (name === selSlackChannel ? ' on' : '');
+    chip.innerHTML = '<span class="dot"></span>' + name;
+    (function(n, c) {
+      c.onclick = function() {
+        selSlackChannel = selSlackChannel === n ? null : n;
+        renderSlackChannels(); onPasteInput('slack');
+      };
+    })(name, chip);
+    g.appendChild(chip);
+  }
+}
+
+function addSlackChannel() {
+  var inp = document.getElementById('new-slack-ch');
+  var name = inp.value.trim(); if (!name) return;
+  if (name[0] !== '#') name = '#' + name;
+  if (slackChannels.indexOf(name) >= 0) return;
+  slackChannels.push(name); selSlackChannel = name; inp.value = '';
+  renderSlackChannels(); onPasteInput('slack');
+}
+
+// ─── PHOTO NOTES ──────────────────────────────────────────────────────────────
+function renderNoteTypes() {
+  var g = document.getElementById('note-types'); if (!g) return;
+  g.innerHTML = '';
+  for (var i = 0; i < NOTE_TYPES.length; i++) {
+    var t = NOTE_TYPES[i];
+    var chip = document.createElement('button');
+    chip.className = 'grp-chip' + (t === selNoteType ? ' on' : '');
+    chip.textContent = t;
+    (function(nt, c) {
+      c.onclick = function() { selNoteType = nt; renderNoteTypes(); };
+    })(t, chip);
+    g.appendChild(chip);
+  }
+}
+
+function onPhotoUpload(event) {
+  var file = event.target.files[0]; if (!file) return;
+  photoMime = file.type || 'image/jpeg';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    photoBase64 = e.target.result.split(',')[1];
+    document.getElementById('photo-img').src = e.target.result;
+    document.getElementById('photo-name').textContent = file.name;
+    document.getElementById('photo-preview').classList.remove('hidden');
+    document.getElementById('photo-drop').style.display = 'none';
+    document.getElementById('photo-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPhoto() {
+  photoBase64 = null;
+  document.getElementById('photo-input').value = '';
+  document.getElementById('photo-img').src = '';
+  document.getElementById('photo-preview').classList.add('hidden');
+  document.getElementById('photo-drop').style.display = '';
+  document.getElementById('photo-btn').disabled = true;
+  document.getElementById('photo-results').innerHTML = '';
+  document.getElementById('photo-status').classList.add('hidden');
+}
+
+function runPhotoExtract() {
+  var key = getApiKey();
+  if (!key) { openApiKeyModal(); return; }
+  if (!photoBase64) return;
+  var btn = document.getElementById('photo-btn'); btn.disabled = true;
+  showExtStatus('photo', 'proc', 'Reading notes…');
+  document.getElementById('photo-results').innerHTML = '';
+  var prompt = 'These are ' + selNoteType + ' from a disaster relief operation. Extract all intake info.\n\nRespond with ONLY this JSON:\n{"summary":"2-4 sentences","actionItems":[{"id":"a1","text":"","type":"need|donor|org|followup|info","priority":"urgent|moderate|low","assignedTo":null,"location":null,"done":false}],"intakes":[{"type":"need|donor|org","name":"","location":"","categories":[],"quantity":null,"contact":null,"priority":"moderate","summary":""}],"people":[],"keyLocations":[],"unresolved":null,"rawText":"verbatim transcription"}';
+  fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body: JSON.stringify({model:MODEL, max_tokens:2000, system:'You are a disaster relief intake extractor. Respond ONLY with valid JSON.', messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:photoMime,data:photoBase64}},{type:'text',text:prompt}]}]})
+  }).then(function(r){
+    if (!r.ok) return r.json().then(function(e){throw new Error(e.error&&e.error.message||'API '+r.status);});
+    return r.json();
+  }).then(function(data){
+    var raw = data.content[0].text.trim().replace(/^```json\s*/,'').replace(/\s*```$/,'');
+    var result = JSON.parse(raw);
+    result.group = '📷 ' + selNoteType; result.timestamp = new Date().toISOString(); result.id = 'photo-' + Date.now();
+    extractResults[result.id] = result;
+    var wrapper = document.getElementById('photo-results');
+    if (result.rawText) {
+      wrapper.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:10px"><div class="res-sec-title" style="margin-bottom:5px">Transcribed text</div><div style="font-size:11px;line-height:1.6;font-family:var(--mono);white-space:pre-wrap">' + result.rawText + '</div></div>';
+    }
+    renderExtResult(result, 'photo-results', true);
+    showExtStatus('photo', 'done', (result.actionItems||[]).length + ' actions · ' + (result.intakes||[]).length + ' intakes');
+    addFeed('#8e44ad', 'Photo notes: ' + selNoteType + ' — ' + (result.summary||'').substring(0,55) + '…', 'Photo', 'now', null);
+  }).catch(function(err){
+    showExtStatus('photo', 'err', 'Error: ' + err.message);
+  }).finally(function(){
+    btn.disabled = false;
+  });
+}
+
+function showExtStatus(type, kind, msg) {
+  var el = document.getElementById(type + '-status');
+  el.className = 'status-bar sb-' + kind;
+  el.innerHTML = kind === 'proc' ? '<div class="spinner"></div>' + msg : '<span>' + (kind==='done'?'✓':'✕') + '</span> ' + msg;
+}
+
+// ─── INTAKE MODAL ─────────────────────────────────────────────────────────────
+function buildCats() {
+  var w = document.getElementById('cat-wrap'); w.innerHTML = '';
+  for (var i = 0; i < CATS.length; i++) {
+    var b = document.createElement('button');
+    b.className = 'copt'; b.textContent = CATS[i];
+    (function(cat, btn) {
+      btn.onclick = function() {
+        btn.classList.toggle('on');
+        var idx = selCats.indexOf(cat);
+        if (idx >= 0) selCats.splice(idx, 1); else selCats.push(cat);
+      };
+    })(CATS[i], b);
+    w.appendChild(b);
+  }
+}
+
+function buildSiteTypeOpts() {
+  var w = document.getElementById('site-type-opts'); w.innerHTML = '';
+  var siteTypes = ['shelter_site','church','distribution','responder','sar','hazard','clinic','mobile'];
+  for (var i = 0; i < siteTypes.length; i++) {
+    var pt = PIN_TYPES[siteTypes[i]];
+    var b = document.createElement('button');
+    b.className = 'copt' + (siteTypes[i] === selSiteType ? ' on' : '');
+    b.textContent = pt.emoji + ' ' + siteTypes[i].replace(/_/g,' ');
+    (function(st, btn) {
+      btn.onclick = function() {
+        selSiteType = st;
+        var all = document.querySelectorAll('#site-type-opts .copt');
+        for (var x = 0; x < all.length; x++) all[x].classList.remove('on');
+        btn.classList.add('on');
+      };
+    })(siteTypes[i], b);
+    w.appendChild(b);
+  }
+}
+
+function setIType(t, el) {
+  curIType = t;
+  var opts = document.querySelectorAll('.topt');
+  for (var i = 0; i < opts.length; i++) opts[i].classList.remove('on');
+  el.classList.add('on');
+  document.getElementById('pri-row').style.display = t === 'need' ? 'flex' : 'none';
+  document.getElementById('site-type-row').classList.toggle('hidden', t !== 'site');
+}
+
+function openIntake() {
+  document.getElementById('intake-overlay').classList.remove('hidden');
+}
+
+function closeIntake() {
+  document.getElementById('intake-overlay').classList.add('hidden');
+  selCats = [];
+  var copts = document.querySelectorAll('.copt'); for (var i=0;i<copts.length;i++) copts[i].classList.remove('on');
+  ['f-name','f-loc','f-notes','f-contact'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+}
+
+function submitIntake() {
+  var name = document.getElementById('f-name').value || 'Unnamed';
+  var loc = document.getElementById('f-loc').value || 'TBD';
+  var pri = document.getElementById('f-pri').value;
+  var src = document.getElementById('f-src').value;
+  var cats = selCats.length ? selCats.slice() : ['Unspecified'];
+  var rx = 0.2+Math.random()*0.6, ry = 0.2+Math.random()*0.6;
+  var id = curIType[0] + Date.now();
+  if (curIType === 'need') {
+    needs.unshift({id:id,name:name,loc:loc,cats:cats,pri:pri,src:src,status:'open',time:'now',x:rx,y:ry,pinType:'need'});
+    addFeed('#e74c3c','New need: '+name,src,'now',null);
+  } else if (curIType === 'donor') {
+    donors.unshift({id:id,name:name,loc:loc,cats:cats,cap:document.getElementById('f-notes').value||'TBD',time:'now',x:rx,y:ry,pinType:'donor'});
+    addFeed('#2980b9','Donor: '+name,src,'now',null);
+  } else if (curIType === 'org') {
+    orgs.unshift({id:id,name:name,loc:loc,cats:cats,vol:'TBD',time:'now',x:rx,y:ry,pinType:'mobile'});
+    metrics.orgs.val++; metrics.orgs.delta++;
+    addFeed('#8e44ad','Org: '+name,src,'now',null);
+  } else if (curIType === 'site') {
+    sites.push({id:id,name:name,loc:loc,pinType:selSiteType,x:rx,y:ry});
+    if (selSiteType === 'responder') { metrics.resp.val++; metrics.resp.delta++; }
+    if (selSiteType === 'sar') { metrics.sar.val++; metrics.sar.delta++; }
+    addFeed('#16a085','Site: '+name,src,'now',null);
+  }
+  updateStats(); renderLeft(); drawMap(); renderMetrics(); saveState();
+  closeIntake();
+}
+
+// ─── METRICS MODAL ────────────────────────────────────────────────────────────
+function openMetEdit() {
+  metEdit = {};
+  var keys = ['lbs','orgs','resp','sar'];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i]; metEdit[k] = {val: metrics[k].val, delta: metrics[k].delta};
+  }
+  var body = document.getElementById('met-body'); body.innerHTML = '';
+  for (var j = 0; j < keys.length; j++) {
+    var key = keys[j], met = metrics[key];
+    var row = document.createElement('div');
+    row.className = 'met-edit-row';
+    row.innerHTML =
+      '<div style="font-size:12px;flex:1;font-weight:500">' + met.label + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">' + met.unit + '</div>' +
+      '<div style="display:flex;gap:3px;align-items:center">' +
+        '<button class="met-adj" onclick="adjMet(\'' + key + '\',-1)">−</button>' +
+        '<input class="met-inp" id="me-' + key + '" type="number" value="' + met.val + '" min="0" oninput="metEdit[\'' + key + '\'].val=parseInt(this.value)||0">' +
+        '<button class="met-adj" onclick="adjMet(\'' + key + '\',1)">+</button>' +
+      '</div>';
+    body.appendChild(row);
+  }
+  document.getElementById('met-overlay').classList.remove('hidden');
+}
+
+function adjMet(k, d) {
+  metEdit[k].val = Math.max(0, (metEdit[k].val||0) + d);
+  var inp = document.getElementById('me-' + k); if (inp) inp.value = metEdit[k].val;
+}
+
+function saveMetrics() {
+  var keys = ['lbs','orgs','resp','sar'];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    metrics[k].val = metEdit[k].val;
+    metrics[k].delta = metEdit[k].delta;
+  }
+  renderMetrics(); saveState(); closeMetEdit();
+}
+
+function closeMetEdit() { document.getElementById('met-overlay').classList.add('hidden'); }
+
+// ─── GOOGLE SHEETS ────────────────────────────────────────────────────────────
+function getSheetsClientId() { return localStorage.getItem('relief_sheets_client_id') || ''; }
+function getSheetsId() { return localStorage.getItem('relief_sheets_id_' + DID) || ''; }
+function saveSheetsId(id) { localStorage.setItem('relief_sheets_id_' + DID, id); }
+
+function openSheetsModal() {
+  document.getElementById('sheets-client-id').value = getSheetsClientId();
+  document.getElementById('sheets-id').value = getSheetsId();
+  document.getElementById('sheets-status').style.display = 'none';
+  document.getElementById('sheets-overlay').classList.remove('hidden');
+  updateSheetsBtn();
+}
+
+function closeSheetsModal() { document.getElementById('sheets-overlay').classList.add('hidden'); }
+
+function saveSheetsSettings() {
+  var cid = document.getElementById('sheets-client-id').value.trim();
+  var sid = document.getElementById('sheets-id').value.trim();
+  if (cid) localStorage.setItem('relief_sheets_client_id', cid);
+  if (sid) saveSheetsId(sid);
+  setSheetsStatus('✓ Settings saved', 'done');
+  updateSheetsBtn();
+}
+
+function setSheetsStatus(msg, kind) {
+  var el = document.getElementById('sheets-status');
+  el.style.display = 'block';
+  var colors = {done:['var(--green-bg)','var(--green-lt)'], err:['var(--red-bg)','var(--red-lt)'], proc:['var(--amber-bg)','var(--amber-lt)']};
+  var c = colors[kind] || ['var(--bg2)','var(--muted)'];
+  el.style.background = c[0]; el.style.color = c[1];
+  el.textContent = msg;
+}
+
+function updateSheetsBtn() {
+  var btn = document.getElementById('sheets-btn');
+  if (!btn) return;
+  var connected = !!getSheetsId();
+  btn.textContent = connected ? '📊 Sheet ✓' : '📊 Sheets';
+  btn.style.color = connected ? 'var(--green)' : 'var(--muted)';
+}
+
+function getOrCreateSheetsToken(cb) {
+  var cid = getSheetsClientId();
+  if (!cid) { openSheetsModal(); return; }
+  if (sheetsToken) { cb(sheetsToken); return; }
+  if (!window.google) { setSheetsStatus('Google sign-in not loaded. Check internet connection.', 'err'); return; }
+  var tc = google.accounts.oauth2.initTokenClient({
+    client_id: cid,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    callback: function(resp) {
+      if (resp.error) { setSheetsStatus('Sign-in failed: '+resp.error, 'err'); return; }
+      sheetsToken = resp.access_token; cb(sheetsToken);
+    }
+  });
+  tc.requestAccessToken({prompt:''});
+}
+
+function connectSheets() {
+  var cid = document.getElementById('sheets-client-id').value.trim();
+  if (cid) localStorage.setItem('relief_sheets_client_id', cid);
+  var sid = document.getElementById('sheets-id').value.trim();
+  if (sid) saveSheetsId(sid);
+  setSheetsStatus('Signing in to Google…', 'proc');
+  getOrCreateSheetsToken(function(token) {
+    var sheetId = getSheetsId();
+    if (!sheetId) {
+      setSheetsStatus('Creating Google Sheet…', 'proc');
+      var info = getDisasterInfo();
+      var title = 'Relief Ops — ' + info.name + ' — ' + new Date().toLocaleDateString();
+      var tabs = ['Needs','Donors','Orgs','Matches','Metrics'];
+      fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+        method:'POST',
+        headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+        body: JSON.stringify({properties:{title:title}, sheets:tabs.map(function(n){return {properties:{title:n}};})})
+      }).then(function(r){return r.json();}).then(function(data){
+        sheetId = data.spreadsheetId;
+        saveSheetsId(sheetId); updateSheetsBtn();
+        writeHeaders(token, sheetId, function() {
+          syncToSheets(token, sheetId, function() {
+            setSheetsStatus('✓ Sheet created and synced! Share link: docs.google.com/spreadsheets/d/' + sheetId, 'done');
+          });
+        });
+      }).catch(function(e){ setSheetsStatus('Error: '+e.message, 'err'); });
+    } else {
+      syncToSheets(token, sheetId, function() {
+        setSheetsStatus('✓ Synced to Google Sheets', 'done');
+        setTimeout(closeSheetsModal, 1500);
+      });
+    }
+  });
+}
+
+function writeHeaders(token, sid, cb) {
+  var hdrs = {
+    Needs:   [['ID','Name','Location','Categories','Priority','Source','Status','Contact','Notes','Time']],
+    Donors:  [['ID','Name','Location','Categories','Capacity','Contact','Notes','Time']],
+    Orgs:    [['ID','Name','Location','Categories','Volunteers','Contact','Notes','Time']],
+    Matches: [['ID','Need','Donor','Org','NeedDetail','DonorDetail','OrgDetail','Priority','Status','Time']],
+    Metrics: [['Key','Label','Value','Delta','Unit','Updated']]
+  };
+  var updates = Object.keys(hdrs).map(function(tab) {
+    var h = hdrs[tab][0];
+    return {range: tab+'!A1:'+String.fromCharCode(64+h.length)+'1', values:hdrs[tab]};
+  });
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/'+sid+'/values:batchUpdate', {
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body: JSON.stringify({valueInputOption:'USER_ENTERED',data:updates})
+  }).then(function(){if(cb)cb();}).catch(function(e){setSheetsStatus('Header error: '+e.message,'err');});
+}
+
+function syncToSheets(token, sid, cb) {
+  if (sheetsSyncing) return;
+  sheetsSyncing = true;
+  var updates = [];
+  if (needs.length) updates.push({range:'Needs!A2:J'+(needs.length+1), values:needs.map(function(n){return[n.id,n.name,n.loc,(n.cats||[]).join(', '),n.pri,n.src,n.status,n.contact||'',n.notes||'',n.time||''];})});
+  if (donors.length) updates.push({range:'Donors!A2:H'+(donors.length+1), values:donors.map(function(d){return[d.id,d.name,d.loc,(d.cats||[]).join(', '),d.cap,d.contact||'',d.notes||'',d.time||''];})});
+  if (orgs.length) updates.push({range:'Orgs!A2:H'+(orgs.length+1), values:orgs.map(function(o){return[o.id,o.name,o.loc,(o.cats||[]).join(', '),o.vol,o.contact||'',o.notes||'',o.time||''];})});
+  if (matches.length) updates.push({range:'Matches!A2:J'+(matches.length+1), values:matches.map(function(m){return[m.id,m.need,m.donor,m.org,m.nd||'',m.dd||'',m.od||'',m.pri,m.status,new Date().toISOString()];})});
+  var metRows = Object.keys(metrics).map(function(k){var m=metrics[k];return[k,m.label,m.val,m.delta,m.unit,new Date().toISOString()];});
+  updates.push({range:'Metrics!A2:F'+(metRows.length+1), values:metRows});
+  if (!updates.length) { sheetsSyncing=false; if(cb)cb(); return; }
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/'+sid+'/values:batchUpdate', {
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body: JSON.stringify({valueInputOption:'USER_ENTERED',data:updates})
+  }).then(function(){if(cb)cb();}).catch(function(e){console.warn('[sheets]',e.message);}).finally(function(){sheetsSyncing=false;});
+}
+
+function sheetsSync() {
+  if (!sheetsToken || !getSheetsId()) return;
+  syncToSheets(sheetsToken, getSheetsId(), null);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  // Map
+  initMap();
+  // Load data
+  loadState();
+  // Header
+  updateHeader();
+  // Clock
+  tick(); setInterval(tick, 15000);
+  // Render all
+  renderLeft();
+  renderMatches();
+  renderFeed();
+  renderSigGroups();
+  renderSlackChannels();
+  renderNoteTypes();
+  updateStats();
+  buildCats();
+  buildSiteTypeOpts();
+  updateApiKeyBtn();
+  updateSheetsBtn();
+  // Map draw after layout settles
+  setTimeout(function() {
+    if (leafletMap) { leafletMap.invalidateSize(); drawMap(); }
+  }, 300);
+  window.addEventListener('resize', function() {
+    if (leafletMap) leafletMap.invalidateSize();
+  });
+  // Auto-save
+  setInterval(saveState, 30000);
+  // Chat
+  var chatRestored = restoreChat();
+  if (!chatRestored) {
+    var key = getApiKey();
+    var openN = 0;
+    for (var i = 0; i < needs.length; i++) if (needs[i].status==='open') openN++;
+    var welcome = key ?
+      'Hello! I am connected to your Relief Ops dashboard.\n\nRight now: ' + openN + ' open needs, ' + donors.length + ' donors, ' + orgs.length + ' orgs logged.\n\nMetrics (lbs, orgs, responders, SAR) start at zero and only reflect what you have manually confirmed. Update them via the Metrics button or ask me to update them.\n\nAsk me for summaries, log new intakes, or update statuses.' :
+      'Hello! Click the API Key button in the top bar to add your Anthropic API key and activate the AI assistant.\n\nGet a free key at console.anthropic.com > API Keys > Create Key.';
+    addMsg('ai', welcome);
+  }
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.getElementById('intake-overlay').classList.add('hidden');
+      document.getElementById('met-overlay').classList.add('hidden');
+      document.getElementById('apikey-overlay').classList.add('hidden');
+      document.getElementById('sheets-overlay').classList.add('hidden');
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
